@@ -4,3 +4,5 @@
 /local.properties
 /app/build/
 /build/
+/app/debug/app-debug.aab
+/app/release/app-release.aab
