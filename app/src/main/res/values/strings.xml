@@ -13,5 +13,6 @@
     <string name="cd" translatable="false">CD</string>
     <string name="ri" translatable="false">RI</string>
     <string name="content_description">Send</string>
-    <string name="no_devices_found">No USB tools  found</string>
+    <string name="no_devices_found">No USB tools found</string>
+    <string name="send_text">Write Text to Send</string>
 </resources>
