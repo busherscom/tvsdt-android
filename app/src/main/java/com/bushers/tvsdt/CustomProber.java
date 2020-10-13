@@ -1,6 +1,6 @@
 package com.bushers.tvsdt;
 
-import com.hoho.android.usbserial.driver.CdcAcmSerialDriver;
+import com.hoho.android.usbserial.driver.Cp21xxSerialDriver;
 import com.hoho.android.usbserial.driver.ProbeTable;
 import com.hoho.android.usbserial.driver.UsbSerialProber;
 
@@ -14,7 +14,7 @@ class CustomProber {
 
     static UsbSerialProber getCustomProber() {
         ProbeTable customTable = new ProbeTable();
-        customTable.addProduct(0x16d0, 0x087e, CdcAcmSerialDriver.class); // e.g. Digispark CDC
+        customTable.addProduct(0x10c4, 0x8d0e, Cp21xxSerialDriver.class);
         return new UsbSerialProber(customTable);
     }
 
