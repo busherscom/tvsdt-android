@@ -107,9 +107,10 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
+            android:autofillHints=""
+            android:hint="@string/send_text"
             android:inputType="text|textNoSuggestions"
-            android:singleLine="true"
-            android:autofillHints="" />
+            android:singleLine="true" />
 
         <ImageButton
             android:id="@+id/send_btn"
