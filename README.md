@@ -1,3 +1,5 @@
+[![Build status](https://build.appcenter.ms/v0.1/apps/a18f069c-dbd7-42eb-b93a-8972c4217f81/branches/master/badge)](https://appcenter.ms)
+
 # TV System Debugging Tool
 
 This Android app provides a line-oriented terminal / console for devices with a serial / UART interface connected with a USB-to-serial-converter.
@@ -21,5 +23,6 @@ and devices implementing the USB CDC protocol like
 ## Credits
 
 The app uses the [usb-serial-for-android](https://github.com/mik3y/usb-serial-for-android) library.
+
 The app is base on [SimpleUsbTerminal](https://github.com/kai-morich/SimpleUsbTerminal) app.
 
