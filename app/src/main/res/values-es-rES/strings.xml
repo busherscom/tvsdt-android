@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BUSHERS TVSDT</string>
+    <string name="devices" translatable="false">Herramientas USB</string>
+    <string name="clear" translatable="false">Limpiar</string>
+    <string name="newline" translatable="false">Modo salto de línea</string>
+    <string name="refresh_devices" translatable="false">Actualizar Herramientas</string>
+    <string name="baud_rate" translatable="false">Tasa de baudios</string>
+    <string name="content_description" translatable="false">Enviar</string>
+    <string name="no_devices_found">No se encontraron herramientas</string>
+    <string name="app_description">Herramienta de Depuración de Estación de TV</string>
+</resources>

@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">BUSHERS TVSDT</string>
+    <string name="app_description">TV Station Debugging Tool</string>
+    <string name="devices">USB Tools</string>
+    <string name="clear">Clear</string>
+    <string name="newline">Newline Mode</string>
+    <string name="refresh_devices">Refresh Tools</string>
+    <string name="baud_rate">Baud rate</string>
+    <string name="rts" translatable="false">RTS</string>
+    <string name="cts" translatable="false">CTS</string>
+    <string name="dtr" translatable="false">DTR</string>
+    <string name="dsr" translatable="false">DSR</string>
+    <string name="cd" translatable="false">CD</string>
+    <string name="ri" translatable="false">RI</string>
+    <string name="content_description">Send</string>
+    <string name="no_devices_found">No USB tools  found</string>
+</resources>
