@@ -12,7 +12,7 @@
         <item>CR+LF</item>
     </string-array>
     <string-array name="newline_values">
-        <item>\u000a</item>
-        <item>\u000d\u000a</item>
+        <item>\\n</item>
+        <item>\\r\\n</item>
     </string-array>
 </resources>
