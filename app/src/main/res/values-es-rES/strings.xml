@@ -10,4 +10,5 @@
     <string name="no_devices_found">No se encontraron herramientas</string>
     <string name="app_description">Herramienta de Depuración de Estación de TV</string>
     <string name="send_text">Escribir Texto a Envíar</string>
+    <string name="no_driver">sin driver</string>
 </resources>

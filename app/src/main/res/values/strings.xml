@@ -15,4 +15,6 @@
     <string name="content_description">Send</string>
     <string name="no_devices_found">No USB tools found</string>
     <string name="send_text">Write Text to Send</string>
+    <string name="no_driver">no driver</string>
+
 </resources>
