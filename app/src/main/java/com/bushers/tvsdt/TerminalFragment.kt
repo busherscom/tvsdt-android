@@ -1,401 +1,375 @@
-package com.bushers.tvsdt;
+package com.bushers.tvsdt
 
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.PendingIntent;
-import android.content.BroadcastReceiver;
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.ServiceConnection;
-import android.hardware.usb.UsbDevice;
-import android.hardware.usb.UsbDeviceConnection;
-import android.hardware.usb.UsbManager;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.IBinder;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.fragment.app.Fragment;
+import android.app.Activity
+import android.app.AlertDialog
+import android.app.PendingIntent
+import android.content.*
+import android.graphics.Color
+import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbManager
+import android.os.Bundle
+import android.os.Handler
+import android.os.IBinder
+import android.os.Looper
+import android.text.Spannable
+import android.text.SpannableStringBuilder
+import android.text.method.ScrollingMovementMethod
+import android.text.style.ForegroundColorSpan
+import android.view.*
+import android.widget.TextView
+import android.widget.Toast
+import android.widget.ToggleButton
+import androidx.fragment.app.Fragment
+import com.bushers.tvsdt.CustomProber.customProber
+import com.bushers.tvsdt.SerialService.SerialBinder
+import com.hoho.android.usbserial.driver.UsbSerialPort
+import com.hoho.android.usbserial.driver.UsbSerialPort.ControlLine
+import com.hoho.android.usbserial.driver.UsbSerialProber
+import java.io.IOException
+import java.util.*
 
-import android.os.Looper;
-import android.text.Spannable;
-import android.text.SpannableStringBuilder;
-import android.text.method.ScrollingMovementMethod;
-import android.text.style.ForegroundColorSpan;
-import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.TextView;
-import android.widget.Toast;
-import android.widget.ToggleButton;
-
-import com.hoho.android.usbserial.driver.UsbSerialDriver;
-import com.hoho.android.usbserial.driver.UsbSerialPort;
-import com.hoho.android.usbserial.driver.UsbSerialProber;
-
-import java.io.IOException;
-import java.util.EnumSet;
-
-public class TerminalFragment extends Fragment implements ServiceConnection, SerialListener {
-
-    private enum Connected { False, Pending, True }
-
-    private int deviceId, portNum, baudRate;
-    private String newline = "\r\n";
-
-    private TextView receiveText;
-
-    private UsbSerialPort usbSerialPort;
-    private SerialService service;
-    private boolean initialStart = true;
-    private Connected connected = Connected.False;
-    private BroadcastReceiver broadcastReceiver;
-    private ControlLines controlLines;
-
-    public TerminalFragment() {
-        broadcastReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                if(intent.getAction().equals(Constants.INTENT_ACTION_GRANT_USB)) {
-                    Boolean granted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false);
-                    connect(granted);
-                }
-            }
-        };
+class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
+    private enum class Connected {
+        False, Pending, True
     }
+
+    private var deviceId = 0
+    private var portNum = 0
+    private var baudRate = 0
+    private var newline = "\r\n"
+    private var receiveText: TextView? = null
+    private var usbSerialPort: UsbSerialPort? = null
+    private var service: SerialService? = null
+    private var initialStart = true
+    private var connected = Connected.False
+    private val broadcastReceiver: BroadcastReceiver
+    private var controlLines: ControlLines? = null
 
     /*
      * Lifecycle
      */
-    @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setHasOptionsMenu(true);
-        setRetainInstance(true);
-        deviceId = getArguments().getInt("device");
-        portNum = getArguments().getInt("port");
-        baudRate = getArguments().getInt("baud");
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setHasOptionsMenu(true)
+        retainInstance = true
+        deviceId = arguments!!.getInt("device")
+        portNum = arguments!!.getInt("port")
+        baudRate = arguments!!.getInt("baud")
     }
 
-    @Override
-    public void onDestroy() {
-        if (connected != Connected.False)
-            disconnect();
-        getActivity().stopService(new Intent(getActivity(), SerialService.class));
-        super.onDestroy();
+    override fun onDestroy() {
+        if (connected != Connected.False) disconnect()
+        activity!!.stopService(Intent(activity, SerialService::class.java))
+        super.onDestroy()
     }
 
-    @Override
-    public void onStart() {
-        super.onStart();
-        if(service != null)
-            service.attach(this);
-        else
-            getActivity().startService(new Intent(getActivity(), SerialService.class)); // prevents service destroy on unbind from recreated activity caused by orientation change
+    override fun onStart() {
+        super.onStart()
+        if (service != null) service!!.attach(this) else activity!!.startService(Intent(activity, SerialService::class.java)) // prevents service destroy on unbind from recreated activity caused by orientation change
     }
 
-    @Override
-    public void onStop() {
-        if(service != null && !getActivity().isChangingConfigurations())
-            service.detach();
-        super.onStop();
+    override fun onStop() {
+        if (service != null && !activity!!.isChangingConfigurations) service!!.detach()
+        super.onStop()
     }
 
-    @SuppressWarnings("deprecation") // onAttach(context) was added with API 23. onAttach(activity) works for all API versions
-    @Override
-    public void onAttach(@NonNull Activity activity) {
-        super.onAttach(activity);
-        getActivity().bindService(new Intent(getActivity(), SerialService.class), this, Context.BIND_AUTO_CREATE);
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        activity!!.bindService(Intent(activity, SerialService::class.java), this, Context.BIND_AUTO_CREATE)
     }
 
-    @Override
-    public void onDetach() {
-        try { getActivity().unbindService(this); } catch(Exception ignored) {}
-        super.onDetach();
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        getActivity().registerReceiver(broadcastReceiver, new IntentFilter(Constants.INTENT_ACTION_GRANT_USB));
-        if(initialStart && service != null) {
-            initialStart = false;
-            getActivity().runOnUiThread(this::connect);
+    override fun onDetach() {
+        try {
+            activity!!.unbindService(this)
+        } catch (ignored: Exception) {
         }
-        if(controlLines != null && connected == Connected.True)
-            controlLines.start();
+        super.onDetach()
     }
 
-    @Override
-    public void onPause() {
-        getActivity().unregisterReceiver(broadcastReceiver);
-        if(controlLines != null)
-            controlLines.stop();
-        super.onPause();
+    override fun onResume() {
+        super.onResume()
+        activity!!.registerReceiver(broadcastReceiver, IntentFilter(Constants.INTENT_ACTION_GRANT_USB))
+        if (initialStart && service != null) {
+            initialStart = false
+            activity!!.runOnUiThread { connect() }
+        }
+        if (controlLines != null && connected == Connected.True) controlLines!!.start()
     }
 
-    @Override
-    public void onServiceConnected(ComponentName name, IBinder binder) {
-        service = ((SerialService.SerialBinder) binder).getService();
-        service.attach(this);
-        if(initialStart && isResumed()) {
-            initialStart = false;
-            getActivity().runOnUiThread(this::connect);
+    override fun onPause() {
+        activity!!.unregisterReceiver(broadcastReceiver)
+        if (controlLines != null) controlLines!!.stop()
+        super.onPause()
+    }
+
+    override fun onServiceConnected(name: ComponentName, binder: IBinder) {
+        service = (binder as SerialBinder).service
+        service!!.attach(this)
+        if (initialStart && isResumed) {
+            initialStart = false
+            activity!!.runOnUiThread { connect() }
         }
     }
 
-    @Override
-    public void onServiceDisconnected(ComponentName name) {
-        service = null;
+    override fun onServiceDisconnected(name: ComponentName) {
+        service = null
     }
 
     /*
      * UI
      */
-    @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_terminal, container, false);
-        receiveText = view.findViewById(R.id.receive_text);                          // TextView performance decreases with number of spans
-        receiveText.setTextColor(getResources().getColor(R.color.colorReceiveText)); // set as default color to reduce number of spans
-        receiveText.setMovementMethod(ScrollingMovementMethod.getInstance());
-        TextView sendText = view.findViewById(R.id.send_text);
-        View sendBtn = view.findViewById(R.id.send_btn);
-        sendBtn.setOnClickListener(v -> send(sendText.getText().toString()));
-        controlLines = new ControlLines(view);
-        return view;
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        val view = inflater.inflate(R.layout.fragment_terminal, container, false)
+        val color = getString(java.lang.String.valueOf(R.color.colorReceiveText).toInt())
+        receiveText = view.findViewById(R.id.receive_text) // TextView performance decreases with number of spans
+        receiveText?.setTextColor(Color.parseColor(color)) // set as default color to reduce number of spans
+        receiveText?.movementMethod = ScrollingMovementMethod.getInstance()
+        val sendText = view.findViewById<TextView>(R.id.send_text)
+        val sendBtn = view.findViewById<View>(R.id.send_btn)
+        sendBtn.setOnClickListener { send(sendText.text.toString()) }
+        controlLines = ControlLines(view)
+        return view
     }
 
-    @Override
-    public void onCreateOptionsMenu(@NonNull Menu menu, MenuInflater inflater) {
-        inflater.inflate(R.menu.menu_terminal, menu);
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        inflater.inflate(R.menu.menu_terminal, menu)
     }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        int id = item.getItemId();
-        if (id == R.id.clear) {
-            receiveText.setText("");
-            return true;
-        } else if (id ==R.id.newline) {
-            String[] newlineNames = getResources().getStringArray(R.array.newline_names);
-            String[] newlineValues = getResources().getStringArray(R.array.newline_values);
-            int pos = java.util.Arrays.asList(newlineValues).indexOf(newline);
-            AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-            builder.setTitle("Newline");
-            builder.setSingleChoiceItems(newlineNames, pos, (dialog, item1) -> {
-                newline = newlineValues[item1];
-                dialog.dismiss();
-            });
-            builder.create().show();
-            return true;
-        } else {
-            return super.onOptionsItemSelected(item);
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.clear -> {
+                receiveText!!.text = ""
+                true
+            }
+            R.id.newline -> {
+                val newlineNames = resources.getStringArray(R.array.newline_names)
+                val newlineValues = resources.getStringArray(R.array.newline_values)
+                val pos = listOf(*newlineValues).indexOf(newline)
+                val builder = AlertDialog.Builder(activity)
+                builder.setTitle("Newline")
+                builder.setSingleChoiceItems(newlineNames, pos) { dialog: DialogInterface, item1: Int ->
+                    newline = newlineValues[item1]
+                    dialog.dismiss()
+                }
+                builder.create().show()
+                true
+            }
+            else -> {
+                super.onOptionsItemSelected(item)
+            }
         }
     }
 
     /*
      * Serial + UI
      */
-    private void connect() {
-        connect(null);
-    }
-
-    private void connect(Boolean permissionGranted) {
-        UsbDevice device = null;
-        UsbManager usbManager = (UsbManager) getActivity().getSystemService(Context.USB_SERVICE);
-        for(UsbDevice v : usbManager.getDeviceList().values())
-            if(v.getDeviceId() == deviceId)
-                device = v;
-        if(device == null) {
-            status("connection failed: device not found");
-            return;
+    private fun connect(permissionGranted: Boolean? = null) {
+        var device: UsbDevice? = null
+        val usbManager = activity!!.getSystemService(Context.USB_SERVICE) as UsbManager
+        for (v in usbManager.deviceList.values) if (v.deviceId == deviceId) device = v
+        if (device == null) {
+            status("connection failed: device not found")
+            return
         }
-        UsbSerialDriver driver = UsbSerialProber.getDefaultProber().probeDevice(device);
-        if(driver == null) {
-            driver = CustomProber.getCustomProber().probeDevice(device);
+        var driver = UsbSerialProber.getDefaultProber().probeDevice(device)
+        if (driver == null) {
+            driver = customProber.probeDevice(device)
         }
-        if(driver == null) {
-            status("connection failed: no driver for device");
-            return;
+        if (driver == null) {
+            status("connection failed: no driver for device")
+            return
         }
-        if(driver.getPorts().size() < portNum) {
-            status("connection failed: not enough ports at device");
-            return;
+        if (driver.ports.size < portNum) {
+            status("connection failed: not enough ports at device")
+            return
         }
-        usbSerialPort = driver.getPorts().get(portNum);
-        UsbDeviceConnection usbConnection = usbManager.openDevice(driver.getDevice());
-        if(usbConnection == null && permissionGranted == null && !usbManager.hasPermission(driver.getDevice())) {
-            PendingIntent usbPermissionIntent = PendingIntent.getBroadcast(getActivity(), 0, new Intent(Constants.INTENT_ACTION_GRANT_USB), 0);
-            usbManager.requestPermission(driver.getDevice(), usbPermissionIntent);
-            return;
+        usbSerialPort = driver.ports[portNum]
+        val usbConnection = usbManager.openDevice(driver.device)
+        if (usbConnection == null && permissionGranted == null && !usbManager.hasPermission(driver.device)) {
+            val usbPermissionIntent = PendingIntent.getBroadcast(activity, 0, Intent(Constants.INTENT_ACTION_GRANT_USB), 0)
+            usbManager.requestPermission(driver.device, usbPermissionIntent)
+            return
         }
-        if(usbConnection == null) {
-            if (!usbManager.hasPermission(driver.getDevice()))
-                status("connection failed: permission denied");
-            else
-                status("connection failed: open failed");
-            return;
+        if (usbConnection == null) {
+            if (!usbManager.hasPermission(driver.device)) status("connection failed: permission denied") else status("connection failed: open failed")
+            return
         }
-
-        connected = Connected.Pending;
+        connected = Connected.Pending
         try {
-            usbSerialPort.open(usbConnection);
-            usbSerialPort.setParameters(baudRate, UsbSerialPort.DATABITS_8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
-            SerialSocket socket = new SerialSocket(getActivity().getApplicationContext(), usbConnection, usbSerialPort);
-            service.connect(socket);
+            usbSerialPort?.open(usbConnection)
+            usbSerialPort?.setParameters(baudRate, UsbSerialPort.DATABITS_8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE)
+            val socket = SerialSocket(activity!!.applicationContext, usbConnection, usbSerialPort)
+            service!!.connect(socket)
             // usb connect is not asynchronous. connect-success and connect-error are returned immediately from socket.connect
             // for consistency to bluetooth/bluetooth-LE app use same SerialListener and SerialService classes
-            onSerialConnect();
-        } catch (Exception e) {
-            onSerialConnectError(e);
+            onSerialConnect()
+        } catch (e: Exception) {
+            onSerialConnectError(e)
         }
     }
 
-    private void disconnect() {
-        connected = Connected.False;
-        controlLines.stop();
-        service.disconnect();
-        usbSerialPort = null;
+    private fun disconnect() {
+        connected = Connected.False
+        controlLines!!.stop()
+        service!!.disconnect()
+        usbSerialPort = null
     }
 
-    private void send(String str) {
-        if(connected != Connected.True) {
-            Toast.makeText(getActivity(), "not connected", Toast.LENGTH_SHORT).show();
-            return;
+    private fun send(str: String) {
+        if (connected != Connected.True) {
+            Toast.makeText(activity, "not connected", Toast.LENGTH_SHORT).show()
+            return
         }
         try {
-            SpannableStringBuilder spn = new SpannableStringBuilder(str+'\n');
-            spn.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.colorSendText)), 0, spn.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-            receiveText.append(spn);
-            byte[] data = (str + newline).getBytes();
-            service.write(data);
-        } catch (Exception e) {
-            onSerialIoError(e);
+            val color = getString(java.lang.String.valueOf(R.color.colorSendText).toInt())
+            val spn = SpannableStringBuilder("""
+    $str
+    
+    """.trimIndent())
+            spn.setSpan(ForegroundColorSpan(Color.parseColor(color)), 0, spn.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            receiveText!!.append(spn)
+            val data = (str + newline).toByteArray()
+            service!!.write(data)
+        } catch (e: Exception) {
+            onSerialIoError(e)
         }
     }
 
-    private void receive(byte[] data) {
-        receiveText.append(new String(data));
+    private fun receive(data: ByteArray?) {
+        receiveText!!.append(String(data!!))
     }
 
-    void status(String str) {
-        SpannableStringBuilder spn = new SpannableStringBuilder(str+'\n');
-        spn.setSpan(new ForegroundColorSpan(getResources().getColor(R.color.colorStatusText)), 0, spn.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-        receiveText.append(spn);
+    fun status(str: String) {
+        val color = getString(java.lang.String.valueOf(R.color.colorStatusText).toInt())
+        val spn = SpannableStringBuilder("""
+    $str
+    
+    """.trimIndent())
+        spn.setSpan(ForegroundColorSpan(Color.parseColor(color)), 0, spn.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        receiveText!!.append(spn)
     }
 
     /*
      * SerialListener
      */
-    @Override
-    public void onSerialConnect() {
-        status("connected");
-        connected = Connected.True;
-        controlLines.start();
+    override fun onSerialConnect() {
+        status("connected")
+        connected = Connected.True
+        controlLines!!.start()
     }
 
-    @Override
-    public void onSerialConnectError(Exception e) {
-        status("connection failed: " + e.getMessage());
-        disconnect();
+    override fun onSerialConnectError(e: Exception?) {
+        status("connection failed: " + e!!.message)
+        disconnect()
     }
 
-    @Override
-    public void onSerialRead(byte[] data) {
-        receive(data);
+    override fun onSerialRead(data: ByteArray?) {
+        receive(data)
     }
 
-    @Override
-    public void onSerialIoError(Exception e) {
-        status("connection lost: " + e.getMessage());
-        disconnect();
+    override fun onSerialIoError(e: Exception?) {
+        status("connection lost: " + e!!.message)
+        disconnect()
     }
 
-    class ControlLines {
-        private static final int refreshInterval = 200; // msec
-
-        private Handler mainLooper;
-        private Runnable runnable;
-        private ToggleButton rtsBtn, ctsBtn, dtrBtn, dsrBtn, cdBtn, riBtn;
-
-        ControlLines(View view) {
-            mainLooper = new Handler(Looper.getMainLooper());
-            runnable = this::run; // w/o explicit Runnable, a new lambda would be created on each postDelayed, which would not be found again by removeCallbacks
-
-            rtsBtn = view.findViewById(R.id.controlLineRts);
-            ctsBtn = view.findViewById(R.id.controlLineCts);
-            dtrBtn = view.findViewById(R.id.controlLineDtr);
-            dsrBtn = view.findViewById(R.id.controlLineDsr);
-            cdBtn = view.findViewById(R.id.controlLineCd);
-            riBtn = view.findViewById(R.id.controlLineRi);
-            rtsBtn.setOnClickListener(this::toggle);
-            dtrBtn.setOnClickListener(this::toggle);
-        }
-
-        private void toggle(View v) {
-            ToggleButton btn = (ToggleButton) v;
+    internal inner class ControlLines(view: View) {
+        private val mainLooper: Handler = Handler(Looper.getMainLooper())
+        private val runnable: Runnable
+        private val rtsBtn: ToggleButton
+        private val ctsBtn: ToggleButton
+        private val dtrBtn: ToggleButton
+        private val dsrBtn: ToggleButton
+        private val cdBtn: ToggleButton
+        private val riBtn: ToggleButton
+        private fun toggle(v: View) {
+            val btn = v as ToggleButton
             if (connected != Connected.True) {
-                btn.setChecked(!btn.isChecked());
-                Toast.makeText(getActivity(), "not connected", Toast.LENGTH_SHORT).show();
-                return;
+                btn.isChecked = !btn.isChecked
+                Toast.makeText(activity, "not connected", Toast.LENGTH_SHORT).show()
+                return
             }
-            String ctrl = "";
+            var ctrl = ""
             try {
-                if (btn.equals(rtsBtn)) { ctrl = "RTS"; usbSerialPort.setRTS(btn.isChecked()); }
-                if (btn.equals(dtrBtn)) { ctrl = "DTR"; usbSerialPort.setDTR(btn.isChecked()); }
-            } catch (IOException e) {
-                status("set" + ctrl + " failed: " + e.getMessage());
+                if (btn == rtsBtn) {
+                    ctrl = "RTS"
+                    usbSerialPort!!.rts = btn.isChecked
+                }
+                if (btn == dtrBtn) {
+                    ctrl = "DTR"
+                    usbSerialPort!!.dtr = btn.isChecked
+                }
+            } catch (e: IOException) {
+                status("set" + ctrl + " failed: " + e.message)
             }
         }
 
-        private void run() {
-            if (connected != Connected.True)
-                return;
+        private fun run() {
+            if (connected != Connected.True) return
             try {
-                EnumSet<UsbSerialPort.ControlLine> controlLines = usbSerialPort.getControlLines();
-                rtsBtn.setChecked(controlLines.contains(UsbSerialPort.ControlLine.RTS));
-                ctsBtn.setChecked(controlLines.contains(UsbSerialPort.ControlLine.CTS));
-                dtrBtn.setChecked(controlLines.contains(UsbSerialPort.ControlLine.DTR));
-                dsrBtn.setChecked(controlLines.contains(UsbSerialPort.ControlLine.DSR));
-                cdBtn.setChecked(controlLines.contains(UsbSerialPort.ControlLine.CD));
-                riBtn.setChecked(controlLines.contains(UsbSerialPort.ControlLine.RI));
-                mainLooper.postDelayed(runnable, refreshInterval);
-            } catch (IOException e) {
-                status("getControlLines() failed: " + e.getMessage() + " -> stopped control line refresh");
+                val controlLines = usbSerialPort!!.controlLines
+                rtsBtn.isChecked = controlLines.contains(ControlLine.RTS)
+                ctsBtn.isChecked = controlLines.contains(ControlLine.CTS)
+                dtrBtn.isChecked = controlLines.contains(ControlLine.DTR)
+                dsrBtn.isChecked = controlLines.contains(ControlLine.DSR)
+                cdBtn.isChecked = controlLines.contains(ControlLine.CD)
+                riBtn.isChecked = controlLines.contains(ControlLine.RI)
+                mainLooper.postDelayed(runnable, refreshInterval.toLong())
+            } catch (e: IOException) {
+                status("getControlLines() failed: " + e.message + " -> stopped control line refresh")
             }
         }
 
-        void start() {
-            if (connected != Connected.True)
-                return;
+        fun start() {
+            if (connected != Connected.True) return
             try {
-                EnumSet<UsbSerialPort.ControlLine> controlLines = usbSerialPort.getSupportedControlLines();
-                if (!controlLines.contains(UsbSerialPort.ControlLine.RTS)) rtsBtn.setVisibility(View.INVISIBLE);
-                if (!controlLines.contains(UsbSerialPort.ControlLine.CTS)) ctsBtn.setVisibility(View.INVISIBLE);
-                if (!controlLines.contains(UsbSerialPort.ControlLine.DTR)) dtrBtn.setVisibility(View.INVISIBLE);
-                if (!controlLines.contains(UsbSerialPort.ControlLine.DSR)) dsrBtn.setVisibility(View.INVISIBLE);
-                if (!controlLines.contains(UsbSerialPort.ControlLine.CD))   cdBtn.setVisibility(View.INVISIBLE);
-                if (!controlLines.contains(UsbSerialPort.ControlLine.RI))   riBtn.setVisibility(View.INVISIBLE);
-                run();
-            } catch (IOException e) {
-                Toast.makeText(getActivity(), "getSupportedControlLines() failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                val controlLines = usbSerialPort!!.supportedControlLines
+                if (!controlLines.contains(ControlLine.RTS)) rtsBtn.visibility = View.INVISIBLE
+                if (!controlLines.contains(ControlLine.CTS)) ctsBtn.visibility = View.INVISIBLE
+                if (!controlLines.contains(ControlLine.DTR)) dtrBtn.visibility = View.INVISIBLE
+                if (!controlLines.contains(ControlLine.DSR)) dsrBtn.visibility = View.INVISIBLE
+                if (!controlLines.contains(ControlLine.CD)) cdBtn.visibility = View.INVISIBLE
+                if (!controlLines.contains(ControlLine.RI)) riBtn.visibility = View.INVISIBLE
+                run()
+            } catch (e: IOException) {
+                Toast.makeText(activity, "getSupportedControlLines() failed: " + e.message, Toast.LENGTH_SHORT).show()
             }
         }
 
-        void stop() {
-            mainLooper.removeCallbacks(runnable);
-            rtsBtn.setChecked(false);
-            ctsBtn.setChecked(false);
-            dtrBtn.setChecked(false);
-            dsrBtn.setChecked(false);
-            cdBtn.setChecked(false);
-            riBtn.setChecked(false);
+        fun stop() {
+            mainLooper.removeCallbacks(runnable)
+            rtsBtn.isChecked = false
+            ctsBtn.isChecked = false
+            dtrBtn.isChecked = false
+            dsrBtn.isChecked = false
+            cdBtn.isChecked = false
+            riBtn.isChecked = false
+        }
+
+
+            private val refreshInterval = 200 // msec
+
+
+        init {
+            runnable = Runnable { this.run() } // w/o explicit Runnable, a new lambda would be created on each postDelayed, which would not be found again by removeCallbacks
+            rtsBtn = view.findViewById(R.id.controlLineRts)
+            ctsBtn = view.findViewById(R.id.controlLineCts)
+            dtrBtn = view.findViewById(R.id.controlLineDtr)
+            dsrBtn = view.findViewById(R.id.controlLineDsr)
+            cdBtn = view.findViewById(R.id.controlLineCd)
+            riBtn = view.findViewById(R.id.controlLineRi)
+            rtsBtn.setOnClickListener { v: View -> toggle(v) }
+            dtrBtn.setOnClickListener { v: View -> toggle(v) }
         }
     }
 
+    init {
+        broadcastReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                if (intent.action == Constants.INTENT_ACTION_GRANT_USB) {
+                    val granted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
+                    connect(granted)
+                }
+            }
+        }
+    }
 }

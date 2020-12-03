@@ -1,102 +1,94 @@
-package com.bushers.tvsdt;
+package com.bushers.tvsdt
 
-import android.app.Activity;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.hardware.usb.UsbDeviceConnection;
+import android.app.Activity
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.hardware.usb.UsbDeviceConnection
+import com.hoho.android.usbserial.driver.UsbSerialPort
+import com.hoho.android.usbserial.util.SerialInputOutputManager
+import java.io.IOException
+import java.security.InvalidParameterException
+import java.util.concurrent.Executors
 
-import com.hoho.android.usbserial.driver.UsbSerialPort;
-import com.hoho.android.usbserial.util.SerialInputOutputManager;
+class SerialSocket internal constructor(context: Context, connection: UsbDeviceConnection?, serialPort: UsbSerialPort?) : SerialInputOutputManager.Listener {
+    private val disconnectBroadcastReceiver: BroadcastReceiver
+    private val context: Context
+    private var listener: SerialListener? = null
+    private var connection: UsbDeviceConnection?
+    private var serialPort: UsbSerialPort?
+    private var ioManager: SerialInputOutputManager? = null
+    val name: String
+        get() = serialPort!!.driver.javaClass.simpleName.replace("SerialDriver", "")
 
-import java.io.IOException;
-import java.security.InvalidParameterException;
-import java.util.concurrent.Executors;
-
-public class SerialSocket implements SerialInputOutputManager.Listener {
-
-    private static final int WRITE_WAIT_MILLIS = 2000; // 0 blocked infinitely on unprogrammed arduino
-
-    private final BroadcastReceiver disconnectBroadcastReceiver;
-
-    private Context context;
-    private SerialListener listener;
-    private UsbDeviceConnection connection;
-    private UsbSerialPort serialPort;
-    private SerialInputOutputManager ioManager;
-
-    SerialSocket(Context context, UsbDeviceConnection connection, UsbSerialPort serialPort) {
-        if(context instanceof Activity)
-            throw new InvalidParameterException("expected non UI context");
-        this.context = context;
-        this.connection = connection;
-        this.serialPort = serialPort;
-        disconnectBroadcastReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                if (listener != null)
-                    listener.onSerialIoError(new IOException("background disconnect"));
-                disconnect(); // disconnect now, else would be queued until UI re-attached
-            }
-        };
+    @Throws(IOException::class)
+    fun connect(listener: SerialListener?) {
+        this.listener = listener
+        context.registerReceiver(disconnectBroadcastReceiver, IntentFilter(Constants.INTENT_ACTION_DISCONNECT))
+        serialPort!!.dtr = true // for arduino, ...
+        serialPort!!.rts = true
+        ioManager = SerialInputOutputManager(serialPort, this)
+        Executors.newSingleThreadExecutor().submit(ioManager)
     }
 
-    String getName() { return serialPort.getDriver().getClass().getSimpleName().replace("SerialDriver",""); }
-
-    void connect(SerialListener listener) throws IOException {
-        this.listener = listener;
-        context.registerReceiver(disconnectBroadcastReceiver, new IntentFilter(Constants.INTENT_ACTION_DISCONNECT));
-        serialPort.setDTR(true); // for arduino, ...
-        serialPort.setRTS(true);
-        ioManager = new SerialInputOutputManager(serialPort, this);
-        Executors.newSingleThreadExecutor().submit(ioManager);
-    }
-
-    void disconnect() {
-        listener = null; // ignore remaining data and errors
+    fun disconnect() {
+        listener = null // ignore remaining data and errors
         if (ioManager != null) {
-            ioManager.setListener(null);
-            ioManager.stop();
-            ioManager = null;
+            ioManager!!.listener = null
+            ioManager!!.stop()
+            ioManager = null
         }
         if (serialPort != null) {
             try {
-                serialPort.setDTR(false);
-                serialPort.setRTS(false);
-            } catch (Exception ignored) {
+                serialPort!!.dtr = false
+                serialPort!!.rts = false
+            } catch (ignored: Exception) {
             }
             try {
-                serialPort.close();
-            } catch (Exception ignored) {
+                serialPort!!.close()
+            } catch (ignored: Exception) {
             }
-            serialPort = null;
+            serialPort = null
         }
-        if(connection != null) {
-            connection.close();
-            connection = null;
+        if (connection != null) {
+            connection!!.close()
+            connection = null
         }
         try {
-            context.unregisterReceiver(disconnectBroadcastReceiver);
-        } catch (Exception ignored) {
+            context.unregisterReceiver(disconnectBroadcastReceiver)
+        } catch (ignored: Exception) {
         }
     }
 
-    void write(byte[] data) throws IOException {
-        if(serialPort == null)
-            throw new IOException("not connected");
-        serialPort.write(data, WRITE_WAIT_MILLIS);
+    @Throws(IOException::class)
+    fun write(data: ByteArray?) {
+        if (serialPort == null) throw IOException("not connected")
+        serialPort!!.write(data, WRITE_WAIT_MILLIS)
     }
 
-    @Override
-    public void onNewData(byte[] data) {
-        if(listener != null)
-            listener.onSerialRead(data);
+    override fun onNewData(data: ByteArray) {
+        if (listener != null) listener!!.onSerialRead(data)
     }
 
-    @Override
-    public void onRunError(Exception e) {
-        if (listener != null)
-            listener.onSerialIoError(e);
+    override fun onRunError(e: Exception) {
+        if (listener != null) listener!!.onSerialIoError(e)
+    }
+
+    companion object {
+        private const val WRITE_WAIT_MILLIS = 2000 // 0 blocked infinitely on unprogrammed arduino
+    }
+
+    init {
+        if (context is Activity) throw InvalidParameterException("expected non UI context")
+        this.context = context
+        this.connection = connection
+        this.serialPort = serialPort
+        disconnectBroadcastReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                if (listener != null) listener!!.onSerialIoError(IOException("background disconnect"))
+                disconnect() // disconnect now, else would be queued until UI re-attached
+            }
+        }
     }
 }

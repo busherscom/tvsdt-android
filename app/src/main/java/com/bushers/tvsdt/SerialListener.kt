@@ -1,8 +1,8 @@
-package com.bushers.tvsdt;
+package com.bushers.tvsdt
 
 interface SerialListener {
-    void onSerialConnect      ();
-    void onSerialConnectError (Exception e);
-    void onSerialRead         (byte[] data);
-    void onSerialIoError      (Exception e);
+    fun onSerialConnect()
+    fun onSerialConnectError(e: Exception?)
+    fun onSerialRead(data: ByteArray?)
+    fun onSerialIoError(e: Exception?)
 }

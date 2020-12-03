@@ -1,252 +1,232 @@
-package com.bushers.tvsdt;
+package com.bushers.tvsdt
 
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
-import android.app.Service;
-import android.content.Context;
-import android.content.Intent;
-import android.os.Binder;
-import android.os.Build;
-import android.os.Handler;
-import android.os.IBinder;
-import android.os.Looper;
-
-import androidx.annotation.Nullable;
-import androidx.core.app.NotificationCompat;
-
-import java.io.IOException;
-import java.util.LinkedList;
-import java.util.Queue;
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
+import android.content.Intent
+import android.graphics.Color
+import android.os.*
+import androidx.core.app.NotificationCompat
+import com.bushers.tvsdt.SerialService
+import java.io.IOException
+import java.util.*
 
 /**
  * create notification and queue serial data while activity is not in the foreground
  * use listener chain: SerialSocket -> SerialService -> UI fragment
  */
-public class SerialService extends Service implements SerialListener {
-
-    class SerialBinder extends Binder {
-        SerialService getService() { return SerialService.this; }
+class SerialService : Service(), SerialListener {
+    internal inner class SerialBinder : Binder() {
+        val service: SerialService
+            get() = this@SerialService
     }
 
-    private enum QueueType {Connect, ConnectError, Read, IoError}
-
-    private class QueueItem {
-        QueueType type;
-        byte[] data;
-        Exception e;
-
-        QueueItem(QueueType type, byte[] data, Exception e) { this.type=type; this.data=data; this.e=e; }
+    private enum class QueueType {
+        Connect, ConnectError, Read, IoError
     }
 
-    private final Handler mainLooper;
-    private final IBinder binder;
-    private final Queue<QueueItem> queue1, queue2;
+    private class QueueItem(var type: QueueType, var data: ByteArray?, var e: Exception?)
 
-    private SerialSocket socket;
-    private SerialListener listener;
-    private boolean connected;
-
-    /**
-     * Lifecylce
-     */
-    public SerialService() {
-        mainLooper = new Handler(Looper.getMainLooper());
-        binder = new SerialBinder();
-        queue1 = new LinkedList<>();
-        queue2 = new LinkedList<>();
+    private val mainLooper: Handler = Handler(Looper.getMainLooper())
+    private val binder: IBinder
+    private val queue1: Queue<QueueItem>
+    private val queue2: Queue<QueueItem>
+    private var socket: SerialSocket? = null
+    private var listener: SerialListener? = null
+    private var connected = false
+    override fun onDestroy() {
+        cancelNotification()
+        disconnect()
+        super.onDestroy()
     }
 
-    @Override
-    public void onDestroy() {
-        cancelNotification();
-        disconnect();
-        super.onDestroy();
-    }
-
-    @Nullable
-    @Override
-    public IBinder onBind(Intent intent) {
-        return binder;
+    override fun onBind(intent: Intent): IBinder {
+        return binder
     }
 
     /**
      * Api
      */
-    public void connect(SerialSocket socket) throws IOException {
-        socket.connect(this);
-        this.socket = socket;
-        connected = true;
+    @Throws(IOException::class)
+    fun connect(socket: SerialSocket) {
+        socket.connect(this)
+        this.socket = socket
+        connected = true
     }
 
-    public void disconnect() {
-        connected = false; // ignore data,errors while disconnecting
-        cancelNotification();
-        if(socket != null) {
-            socket.disconnect();
-            socket = null;
+    fun disconnect() {
+        connected = false // ignore data,errors while disconnecting
+        cancelNotification()
+        if (socket != null) {
+            socket!!.disconnect()
+            socket = null
         }
     }
 
-    public void write(byte[] data) throws IOException {
-        if(!connected)
-            throw new IOException("not connected");
-        socket.write(data);
+    @Throws(IOException::class)
+    fun write(data: ByteArray?) {
+        if (!connected) throw IOException("not connected")
+        socket!!.write(data)
     }
 
-    public void attach(SerialListener listener) {
-        if(Looper.getMainLooper().getThread() != Thread.currentThread())
-            throw new IllegalArgumentException("not in main thread");
-        cancelNotification();
+    fun attach(listener: SerialListener) {
+        require(!(Looper.getMainLooper().thread !== Thread.currentThread())) { "not in main thread" }
+        cancelNotification()
         // use synchronized() to prevent new items in queue2
         // new items will not be added to queue1 because mainLooper.post and attach() run in main thread
-        synchronized (this) {
-            this.listener = listener;
-        }
-        for(QueueItem item : queue1) {
-            switch(item.type) {
-                case Connect:       listener.onSerialConnect      (); break;
-                case ConnectError:  listener.onSerialConnectError (item.e); break;
-                case Read:          listener.onSerialRead         (item.data); break;
-                case IoError:       listener.onSerialIoError      (item.e); break;
+        synchronized(this) { this.listener = listener }
+        for (item in queue1) {
+            when (item.type) {
+                QueueType.Connect -> listener.onSerialConnect()
+                QueueType.ConnectError -> listener.onSerialConnectError(item.e)
+                QueueType.Read -> listener.onSerialRead(item.data)
+                QueueType.IoError -> listener.onSerialIoError(item.e)
             }
         }
-        for(QueueItem item : queue2) {
-            switch(item.type) {
-                case Connect:       listener.onSerialConnect      (); break;
-                case ConnectError:  listener.onSerialConnectError (item.e); break;
-                case Read:          listener.onSerialRead         (item.data); break;
-                case IoError:       listener.onSerialIoError      (item.e); break;
+        for (item in queue2) {
+            when (item.type) {
+                QueueType.Connect -> listener.onSerialConnect()
+                QueueType.ConnectError -> listener.onSerialConnectError(item.e)
+                QueueType.Read -> listener.onSerialRead(item.data)
+                QueueType.IoError -> listener.onSerialIoError(item.e)
             }
         }
-        queue1.clear();
-        queue2.clear();
+        queue1.clear()
+        queue2.clear()
     }
 
-    public void detach() {
-        if(connected)
-            createNotification();
+    fun detach() {
+        if (connected) createNotification()
         // items already in event queue (posted before detach() to mainLooper) will end up in queue1
         // items occurring later, will be moved directly to queue2
         // detach() and mainLooper.post run in the main thread, so all items are caught
-        listener = null;
+        listener = null
     }
 
-    private void createNotification() {
+    private fun createNotification() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel nc = new NotificationChannel(Constants.NOTIFICATION_CHANNEL, "Background service", NotificationManager.IMPORTANCE_LOW);
-            nc.setShowBadge(false);
-            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            nm.createNotificationChannel(nc);
+            val nc = NotificationChannel(Constants.NOTIFICATION_CHANNEL, "Background service", NotificationManager.IMPORTANCE_LOW)
+            nc.setShowBadge(false)
+            val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            nm.createNotificationChannel(nc)
         }
-        Intent disconnectIntent = new Intent()
-                .setAction(Constants.INTENT_ACTION_DISCONNECT);
-        Intent restartIntent = new Intent()
+        val disconnectIntent = Intent()
+                .setAction(Constants.INTENT_ACTION_DISCONNECT)
+        val restartIntent = Intent()
                 .setClassName(this, Constants.INTENT_CLASS_MAIN_ACTIVITY)
                 .setAction(Intent.ACTION_MAIN)
-                .addCategory(Intent.CATEGORY_LAUNCHER);
-        PendingIntent disconnectPendingIntent = PendingIntent.getBroadcast(this, 1, disconnectIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-        PendingIntent restartPendingIntent = PendingIntent.getActivity(this, 1, restartIntent,  PendingIntent.FLAG_UPDATE_CURRENT);
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, Constants.NOTIFICATION_CHANNEL)
+                .addCategory(Intent.CATEGORY_LAUNCHER)
+        val disconnectPendingIntent = PendingIntent.getBroadcast(this, 1, disconnectIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        val restartPendingIntent = PendingIntent.getActivity(this, 1, restartIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        val color = getString(java.lang.String.valueOf(R.color.colorPrimary).toInt())
+        val builder = NotificationCompat.Builder(this, Constants.NOTIFICATION_CHANNEL)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setColor(getResources().getColor(R.color.colorPrimary))
-                .setContentTitle(getResources().getString(R.string.app_name))
-                .setContentText(socket != null ? "Connected to "+socket.getName() : "Background Service")
+                .setColor(Color.parseColor(color))
+                .setContentTitle(resources.getString(R.string.app_name))
+                .setContentText(if (socket != null) "Connected to " + socket!!.name else "Background Service")
                 .setContentIntent(restartPendingIntent)
                 .setOngoing(true)
-                .addAction(new NotificationCompat.Action(R.drawable.ic_clear_white_24dp, "Disconnect", disconnectPendingIntent));
+                .addAction(NotificationCompat.Action(R.drawable.ic_clear_white_24dp, "Disconnect", disconnectPendingIntent))
         // @drawable/ic_notification created with Android Studio -> New -> Image Asset using @color/colorPrimaryDark as background color
         // Android < API 21 does not support vectorDrawables in notifications, so both drawables used here, are created as .png instead of .xml
-        Notification notification = builder.build();
-        startForeground(Constants.NOTIFY_MANAGER_START_FOREGROUND_SERVICE, notification);
+        val notification = builder.build()
+        startForeground(Constants.NOTIFY_MANAGER_START_FOREGROUND_SERVICE, notification)
     }
 
-    private void cancelNotification() {
-        stopForeground(true);
+    private fun cancelNotification() {
+        stopForeground(true)
     }
 
     /**
      * SerialListener
      */
-    public void onSerialConnect() {
-        if(connected) {
-            synchronized (this) {
+    override fun onSerialConnect() {
+        if (connected) {
+            synchronized(this) {
                 if (listener != null) {
-                    mainLooper.post(() -> {
+                    mainLooper.post {
                         if (listener != null) {
-                            listener.onSerialConnect();
+                            listener!!.onSerialConnect()
                         } else {
-                            queue1.add(new QueueItem(QueueType.Connect, null, null));
+                            queue1.add(QueueItem(QueueType.Connect, null, null))
                         }
-                    });
+                    }
                 } else {
-                    queue2.add(new QueueItem(QueueType.Connect, null, null));
+                    queue2.add(QueueItem(QueueType.Connect, null, null))
                 }
             }
         }
     }
 
-    public void onSerialConnectError(Exception e) {
-        if(connected) {
-            synchronized (this) {
+    override fun onSerialConnectError(e: Exception?) {
+        if (connected) {
+            synchronized(this) {
                 if (listener != null) {
-                    mainLooper.post(() -> {
+                    mainLooper.post {
                         if (listener != null) {
-                            listener.onSerialConnectError(e);
+                            listener!!.onSerialConnectError(e)
                         } else {
-                            queue1.add(new QueueItem(QueueType.ConnectError, null, e));
-                            cancelNotification();
-                            disconnect();
+                            queue1.add(QueueItem(QueueType.ConnectError, null, e))
+                            cancelNotification()
+                            disconnect()
                         }
-                    });
+                    }
                 } else {
-                    queue2.add(new QueueItem(QueueType.ConnectError, null, e));
-                    cancelNotification();
-                    disconnect();
+                    queue2.add(QueueItem(QueueType.ConnectError, null, e))
+                    cancelNotification()
+                    disconnect()
                 }
             }
         }
     }
 
-    public void onSerialRead(byte[] data) {
-        if(connected) {
-            synchronized (this) {
+    override fun onSerialRead(data: ByteArray?) {
+        if (connected) {
+            synchronized(this) {
                 if (listener != null) {
-                    mainLooper.post(() -> {
+                    mainLooper.post {
                         if (listener != null) {
-                            listener.onSerialRead(data);
+                            listener!!.onSerialRead(data)
                         } else {
-                            queue1.add(new QueueItem(QueueType.Read, data, null));
+                            queue1.add(QueueItem(QueueType.Read, data, null))
                         }
-                    });
+                    }
                 } else {
-                    queue2.add(new QueueItem(QueueType.Read, data, null));
+                    queue2.add(QueueItem(QueueType.Read, data, null))
                 }
             }
         }
     }
 
-    public void onSerialIoError(Exception e) {
-        if(connected) {
-            synchronized (this) {
+    override fun onSerialIoError(e: Exception?) {
+        if (connected) {
+            synchronized(this) {
                 if (listener != null) {
-                    mainLooper.post(() -> {
+                    mainLooper.post {
                         if (listener != null) {
-                            listener.onSerialIoError(e);
+                            listener!!.onSerialIoError(e)
                         } else {
-                            queue1.add(new QueueItem(QueueType.IoError, null, e));
-                            cancelNotification();
-                            disconnect();
+                            queue1.add(QueueItem(QueueType.IoError, null, e))
+                            cancelNotification()
+                            disconnect()
                         }
-                    });
+                    }
                 } else {
-                    queue2.add(new QueueItem(QueueType.IoError, null, e));
-                    cancelNotification();
-                    disconnect();
+                    queue2.add(QueueItem(QueueType.IoError, null, e))
+                    cancelNotification()
+                    disconnect()
                 }
             }
         }
     }
 
+    /**
+     * Lifecylce
+     */
+    init {
+        binder = SerialBinder()
+        queue1 = LinkedList()
+        queue2 = LinkedList()
+    }
 }

@@ -1,50 +1,40 @@
-package com.bushers.tvsdt;
+package com.bushers.tvsdt
 
-import android.content.Intent;
-import android.os.Bundle;
-import androidx.fragment.app.FragmentManager;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
-import com.microsoft.appcenter.AppCenter;
-import com.microsoft.appcenter.analytics.Analytics;
-import com.microsoft.appcenter.crashes.Crashes;
+import android.content.Intent
+import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
+import androidx.fragment.app.FragmentManager
+import com.microsoft.appcenter.AppCenter
+import com.microsoft.appcenter.analytics.Analytics
+import com.microsoft.appcenter.crashes.Crashes
 
-public class MainActivity extends AppCompatActivity implements FragmentManager.OnBackStackChangedListener {
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        AppCenter.start(getApplication(), "c82d59c0-b073-4c7a-8959-56c8ee47ecbe",
-                Analytics.class, Crashes.class);
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-        getSupportFragmentManager().addOnBackStackChangedListener(this);
-        if (savedInstanceState == null)
-            getSupportFragmentManager().beginTransaction().add(R.id.fragment, new DevicesFragment(), "devices").commit();
-        else
-            onBackStackChanged();
+class MainActivity : AppCompatActivity(), FragmentManager.OnBackStackChangedListener {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        AppCenter.start(application, "c82d59c0-b073-4c7a-8959-56c8ee47ecbe",
+                Analytics::class.java, Crashes::class.java)
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+        val toolbar = findViewById<Toolbar>(R.id.toolbar)
+        setSupportActionBar(toolbar)
+        supportFragmentManager.addOnBackStackChangedListener(this)
+        if (savedInstanceState == null) supportFragmentManager.beginTransaction().add(R.id.fragment, DevicesFragment(), "devices").commit() else onBackStackChanged()
     }
 
-    @Override
-    public void onBackStackChanged() {
-        getSupportActionBar().setDisplayHomeAsUpEnabled(getSupportFragmentManager().getBackStackEntryCount()>0);
+    override fun onBackStackChanged() {
+        supportActionBar!!.setDisplayHomeAsUpEnabled(supportFragmentManager.backStackEntryCount > 0)
     }
 
-    @Override
-    public boolean onSupportNavigateUp() {
-        onBackPressed();
-        return true;
+    override fun onSupportNavigateUp(): Boolean {
+        onBackPressed()
+        return true
     }
 
-    @Override
-    protected void onNewIntent(Intent intent) {
-        if(intent.getAction().equals("android.hardware.usb.action.USB_DEVICE_ATTACHED")) {
-            TerminalFragment terminal = (TerminalFragment)getSupportFragmentManager().findFragmentByTag("terminal");
-            if (terminal != null)
-                terminal.status("USB device detected");
+    override fun onNewIntent(intent: Intent) {
+        if (intent.action == "android.hardware.usb.action.USB_DEVICE_ATTACHED") {
+            val terminal = supportFragmentManager.findFragmentByTag("terminal") as TerminalFragment?
+            terminal?.status("USB device detected")
         }
-        super.onNewIntent(intent);
+        super.onNewIntent(intent)
     }
-
 }
