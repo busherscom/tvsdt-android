@@ -1,6 +1,5 @@
 package com.bushers.tvsdt
 
-import android.app.Activity
 import android.app.AlertDialog
 import android.app.PendingIntent
 import android.content.*
@@ -23,10 +22,10 @@ import androidx.fragment.app.Fragment
 import com.bushers.tvsdt.CustomProber.customProber
 import com.bushers.tvsdt.SerialService.SerialBinder
 import com.hoho.android.usbserial.driver.UsbSerialPort
-import com.hoho.android.usbserial.driver.UsbSerialPort.ControlLine
 import com.hoho.android.usbserial.driver.UsbSerialProber
 import java.io.IOException
 import java.util.*
+import kotlin.concurrent.timerTask
 
 class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
     private enum class Connected {
@@ -275,12 +274,6 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
     internal inner class ControlLines(view: View) {
         private val mainLooper: Handler = Handler(Looper.getMainLooper())
         private val runnable: Runnable
-        private val rtsBtn: ToggleButton
-        private val ctsBtn: ToggleButton
-        private val dtrBtn: ToggleButton
-        private val dsrBtn: ToggleButton
-        private val cdBtn: ToggleButton
-        private val riBtn: ToggleButton
         private fun toggle(v: View) {
             val btn = v as ToggleButton
             if (connected != Connected.True) {
@@ -288,31 +281,11 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
                 Toast.makeText(activity, "not connected", Toast.LENGTH_SHORT).show()
                 return
             }
-            var ctrl = ""
-            try {
-                if (btn == rtsBtn) {
-                    ctrl = "RTS"
-                    usbSerialPort!!.rts = btn.isChecked
-                }
-                if (btn == dtrBtn) {
-                    ctrl = "DTR"
-                    usbSerialPort!!.dtr = btn.isChecked
-                }
-            } catch (e: IOException) {
-                status("set" + ctrl + " failed: " + e.message)
-            }
         }
 
         private fun run() {
             if (connected != Connected.True) return
             try {
-                val controlLines = usbSerialPort!!.controlLines
-                rtsBtn.isChecked = controlLines.contains(ControlLine.RTS)
-                ctsBtn.isChecked = controlLines.contains(ControlLine.CTS)
-                dtrBtn.isChecked = controlLines.contains(ControlLine.DTR)
-                dsrBtn.isChecked = controlLines.contains(ControlLine.DSR)
-                cdBtn.isChecked = controlLines.contains(ControlLine.CD)
-                riBtn.isChecked = controlLines.contains(ControlLine.RI)
                 mainLooper.postDelayed(runnable, refreshInterval.toLong())
             } catch (e: IOException) {
                 status("getControlLines() failed: " + e.message + " -> stopped control line refresh")
@@ -322,13 +295,6 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
         fun start() {
             if (connected != Connected.True) return
             try {
-                val controlLines = usbSerialPort!!.supportedControlLines
-                if (!controlLines.contains(ControlLine.RTS)) rtsBtn.visibility = View.INVISIBLE
-                if (!controlLines.contains(ControlLine.CTS)) ctsBtn.visibility = View.INVISIBLE
-                if (!controlLines.contains(ControlLine.DTR)) dtrBtn.visibility = View.INVISIBLE
-                if (!controlLines.contains(ControlLine.DSR)) dsrBtn.visibility = View.INVISIBLE
-                if (!controlLines.contains(ControlLine.CD)) cdBtn.visibility = View.INVISIBLE
-                if (!controlLines.contains(ControlLine.RI)) riBtn.visibility = View.INVISIBLE
                 run()
             } catch (e: IOException) {
                 Toast.makeText(activity, "getSupportedControlLines() failed: " + e.message, Toast.LENGTH_SHORT).show()
@@ -337,20 +303,45 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
 
         fun stop() {
             mainLooper.removeCallbacks(runnable)
-            rtsBtn.isChecked = false
-            ctsBtn.isChecked = false
-            dtrBtn.isChecked = false
-            dsrBtn.isChecked = false
-            cdBtn.isChecked = false
-            riBtn.isChecked = false
         }
 
 
-            private val refreshInterval = 200 // msec
+        private val refreshInterval = 200 // msec
 
 
         init {
             runnable = Runnable { this.run() } // w/o explicit Runnable, a new lambda would be created on each postDelayed, which would not be found again by removeCallbacks
+
+            val keyAccessEnter = view.findViewById<View>(R.id.key_access_1)
+            val keyAccessEsc = view.findViewById<View>(R.id.key_access_2)
+            val bootLogo = view.findViewById<View>(R.id.bootlogo)
+            val panelInit = view.findViewById<View>(R.id.panel_init)
+            val usbstart = view.findViewById<View>(R.id.usbstart)
+            val restoreBackup = view.findViewById<View>(R.id.restore_backup)
+            val audioPreinit = view.findViewById<View>(R.id.audio_preinit)
+            val custar = view.findViewById<View>(R.id.custar)
+            val mmcinfo = view.findViewById<View>(R.id.mmcinfo)
+            val reset = view.findViewById<View>(R.id.reset)
+            bootLogo.setOnClickListener { send("bootlogo") }
+            panelInit.setOnClickListener { send("panel_init") }
+            usbstart.setOnClickListener { send("usbstart") }
+            restoreBackup.setOnClickListener { send("restore_backup") }
+            audioPreinit.setOnClickListener { send("audio_preinit") }
+            custar.setOnClickListener { send("custar") }
+            mmcinfo.setOnClickListener { send("mmcinfo") }
+            reset.setOnClickListener { send("reset") }
+            fun key() {
+                Timer().scheduleAtFixedRate(timerTask {
+                    send("Enter")
+                }, 2000, 2)
+            }
+            keyAccessEnter.setOnClickListener {
+                key()
+            }
+            keyAccessEsc.setOnClickListener {
+                key()
+            }
+            /**
             rtsBtn = view.findViewById(R.id.controlLineRts)
             ctsBtn = view.findViewById(R.id.controlLineCts)
             dtrBtn = view.findViewById(R.id.controlLineDtr)
@@ -359,6 +350,7 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
             riBtn = view.findViewById(R.id.controlLineRi)
             rtsBtn.setOnClickListener { v: View -> toggle(v) }
             dtrBtn.setOnClickListener { v: View -> toggle(v) }
+             **/
         }
     }
 

@@ -16,5 +16,15 @@
     <string name="no_devices_found">No USB tools found</string>
     <string name="send_text">Write Text to Send</string>
     <string name="no_driver">no driver</string>
+    <string name="key_access_1">KEY ACCESS 1</string>
+    <string name="key_access_2">KEY ACCESS 2</string>
+    <string name="bootlogo">BOOTLOGO</string>
+    <string name="panel_init">FORCE BACKLIGHT</string>
+    <string name="usbstart">BACKUP TO USB</string>
+    <string name="restore_backup">RESTORE BACKUP</string>
+    <string name="audio_preinit">DIAGNOSE SOUND</string>
+    <string name="custar">FIRMWARE UPGRADE</string>
+    <string name="mmcinfo">MEMORY INFORMATION</string>
+    <string name="reset">REST</string>
 
 </resources>
