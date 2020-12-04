@@ -13,14 +13,16 @@ import com.microsoft.appcenter.crashes.Crashes
 class MainActivity : AppCompatActivity(), FragmentManager.OnBackStackChangedListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         // Initialize SDK
-        if (BuildConfig.APPCENTER_APP_SECRET != "") {
-            // Use APPCENTER_APP_SECRET environment variable if it exists
-            AppCenter.start(application, BuildConfig.APPCENTER_APP_SECRET,
-                Analytics::class.java, Crashes::class.java)
-        } else {
-            // Otherwise use the hardcoded string value here
-            AppCenter.start(application, "<APP SECRET HERE>",
-                Analytics::class.java, Crashes::class.java)
+        if (!AppCenter.isConfigured()) {
+            if (BuildConfig.APPCENTER_APP_SECRET != "") {
+                // Use APPCENTER_APP_SECRET environment variable if it exists
+                AppCenter.start(application, BuildConfig.APPCENTER_APP_SECRET,
+                    Analytics::class.java, Crashes::class.java)
+            } else {
+                // Otherwise use the hardcoded string value here
+                AppCenter.start(application, "<APP SECRET HERE>",
+                    Analytics::class.java, Crashes::class.java)
+            }
         }
         if (BuildConfig.DEBUG) {
             AppCenter.setLogLevel(Log.VERBOSE)
