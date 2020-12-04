@@ -27,7 +27,6 @@ import com.microsoft.appcenter.analytics.Analytics
 import com.microsoft.appcenter.crashes.Crashes
 import java.io.IOException
 import java.util.*
-import kotlin.concurrent.timerTask
 
 class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
     private enum class Connected {
@@ -37,7 +36,7 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
     private var deviceId = 0
     private var portNum = 0
     private var baudRate = 0
-    private var newline = "\r\n"
+    private var newline = "\n"
     private var receiveText: TextView? = null
     private var usbSerialPort: UsbSerialPort? = null
     private var service: SerialService? = null
@@ -138,7 +137,7 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
         savedInstanceState: Bundle?
     ): View? {
         val view = inflater.inflate(R.layout.fragment_terminal, container, false)
-        val color = getString(java.lang.String.valueOf(R.color.colorReceiveText).toInt())
+        val color = getString(java.lang.String.valueOf(R.color.secondaryTextColor).toInt())
         receiveText =
             view.findViewById(R.id.receive_text) // TextView performance decreases with number of spans
         receiveText?.setTextColor(Color.parseColor(color)) // set as default color to reduce number of spans
@@ -260,7 +259,7 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
             return
         }
         try {
-            val color = getString(java.lang.String.valueOf(R.color.colorSendText).toInt())
+            val color = getString(java.lang.String.valueOf(R.color.primaryTextColor).toInt())
             val spn = SpannableStringBuilder(
                 """
     $str
@@ -287,7 +286,7 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
     }
 
     fun status(str: String) {
-        val color = getString(java.lang.String.valueOf(R.color.colorStatusText).toInt())
+        val color = getString(java.lang.String.valueOf(R.color.primaryTextColor).toInt())
         val spn = SpannableStringBuilder(
             """
     $str
@@ -420,23 +419,45 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
                 send("reset")
                 Analytics.trackEvent("OnClick Reset")
             }
-            fun key() {
-                try {
-                    Timer().scheduleAtFixedRate(timerTask {
-                        send("Enter")
 
-                    }, 2000, 2)
+
+
+            keyAccessEnter.setOnClickListener {
+                try {
+                    Timer().scheduleAtFixedRate(object : TimerTask() {
+                        var t0 = System.currentTimeMillis()
+                        override fun run() {
+                            if (System.currentTimeMillis() - t0 > 4 * 1000) {
+                                cancel()
+                            } else {
+                                send(newline)
+                            }
+                        }
+                    }, 0, 100)
+                } catch (e: Exception) {
+                    Crashes.trackError(e)
+                }
+                Analytics.trackEvent("OnClick Access Key")
+            }
+            keyAccessEsc.setOnClickListener {
+                try {
+                    Timer().scheduleAtFixedRate(
+                        object : TimerTask() {
+                            var t0 = System.currentTimeMillis()
+                            override fun run() {
+                                if (System.currentTimeMillis() - t0 > 4 * 1000) {
+                                    cancel()
+                                } else {
+                                    send("\u001B")
+                                }
+                            }
+                        },
+                        0, 100,
+                    )
                 } catch (e: Exception) {
                     Crashes.trackError(e)
                 }
 
-            }
-            keyAccessEnter.setOnClickListener {
-                key()
-                Analytics.trackEvent("OnClick Access Key")
-            }
-            keyAccessEsc.setOnClickListener {
-                key()
                 Analytics.trackEvent("OnClick Access Key")
             }
         }

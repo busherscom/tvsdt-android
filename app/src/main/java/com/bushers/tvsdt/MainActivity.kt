@@ -10,6 +10,8 @@ import androidx.fragment.app.FragmentManager
 import com.microsoft.appcenter.AppCenter
 import com.microsoft.appcenter.analytics.Analytics
 import com.microsoft.appcenter.crashes.Crashes
+import java.util.*
+import kotlin.collections.HashMap
 
 class MainActivity : AppCompatActivity(), FragmentManager.OnBackStackChangedListener {
     override fun onCreate(savedInstanceState: Bundle?) {

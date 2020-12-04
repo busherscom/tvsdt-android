@@ -120,7 +120,7 @@ class SerialService : Service(), SerialListener {
                 .addCategory(Intent.CATEGORY_LAUNCHER)
         val disconnectPendingIntent = PendingIntent.getBroadcast(this, 1, disconnectIntent, PendingIntent.FLAG_UPDATE_CURRENT)
         val restartPendingIntent = PendingIntent.getActivity(this, 1, restartIntent, PendingIntent.FLAG_UPDATE_CURRENT)
-        val color = getString(java.lang.String.valueOf(R.color.colorPrimary).toInt())
+        val color = getString(java.lang.String.valueOf(R.color.primaryColor).toInt())
         val builder = NotificationCompat.Builder(this, Constants.NOTIFICATION_CHANNEL)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setColor(Color.parseColor(color))
