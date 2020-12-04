@@ -10,6 +10,7 @@
 
     <!-- 0x10C4 / 0xEAxx: Silabs CP210x -->
     <usb-device vendor-id="4292" product-id="60000" /> <!-- 0xea60: CP2102 -->
+    <usb-device vendor-id="4292" product-id="36110" /> <!-- 0x8e0e: TVSDT -->
     <usb-device vendor-id="4292" product-id="60016" /> <!-- 0xea70: CP2105 -->
     <usb-device vendor-id="4292" product-id="60017" /> <!-- 0xea71: CP2108 -->
     <usb-device vendor-id="4292" product-id="60032" /> <!-- 0xea80: CP2110 -->
