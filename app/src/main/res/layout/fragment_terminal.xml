@@ -108,6 +108,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:background="#095ABA"
         android:freezesText="true"
         android:gravity="bottom"
         android:scrollbars="vertical"
