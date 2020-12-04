@@ -2,6 +2,7 @@ package com.bushers.tvsdt
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.fragment.app.FragmentManager
@@ -11,14 +12,29 @@ import com.microsoft.appcenter.crashes.Crashes
 
 class MainActivity : AppCompatActivity(), FragmentManager.OnBackStackChangedListener {
     override fun onCreate(savedInstanceState: Bundle?) {
-        AppCenter.start(application, "c82d59c0-b073-4c7a-8959-56c8ee47ecbe",
+        // Initialize SDK
+        if (BuildConfig.APPCENTER_APP_SECRET != "") {
+            // Use APPCENTER_APP_SECRET environment variable if it exists
+            AppCenter.start(application, BuildConfig.APPCENTER_APP_SECRET,
                 Analytics::class.java, Crashes::class.java)
+        } else {
+            // Otherwise use the hardcoded string value here
+            AppCenter.start(application, "<APP SECRET HERE>",
+                Analytics::class.java, Crashes::class.java)
+        }
+        if (BuildConfig.DEBUG) {
+            AppCenter.setLogLevel(Log.VERBOSE)
+        }
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
         supportFragmentManager.addOnBackStackChangedListener(this)
-        if (savedInstanceState == null) supportFragmentManager.beginTransaction().add(R.id.fragment, DevicesFragment(), "devices").commit() else onBackStackChanged()
+        if (savedInstanceState == null) supportFragmentManager.beginTransaction().add(
+            R.id.fragment,
+            DevicesFragment(),
+            "devices"
+        ).commit() else onBackStackChanged()
     }
 
     override fun onBackStackChanged() {
