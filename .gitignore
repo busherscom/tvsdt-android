@@ -8,3 +8,6 @@
 /app/release/app-release.aab
 /app/release/app-release.apk
 /app/release/output-metadata.json
+/app/obfuscation/mapping.txt
+/app/obfuscation/seeds.txt
+/app/obfuscation/unused.txt
