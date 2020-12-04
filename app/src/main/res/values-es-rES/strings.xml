@@ -16,7 +16,7 @@
     <string name="bootlogo">Logo</string>
     <string name="restore_backup">Restaurar</string>
     <string name="audio_preinit">Sonido</string>
-    <string name="usbstart">Copia Boot</string>
+    <string name="usbstart">Copia BOOT 1_2</string>
     <string name="panel_init">Ledbar</string>
     <string name="custar">Actualización</string>
     <string name="reset">Reset</string>
