@@ -1,4 +1,6 @@
-[![Build status](https://build.appcenter.ms/v0.1/apps/1e1a1b27-79f7-4a73-bc71-4fb8788f314e/branches/main/badge)](https://appcenter.ms)
+[![Build status](https://build.appcenter.ms/v0.1/apps/1e1a1b27-79f7-4a73-bc71-4fb8788f314e/branches/production/badge)](https://appcenter.ms)
+[![Build status](https://build.appcenter.ms/v0.1/apps/1e1a1b27-79f7-4a73-bc71-4fb8788f314e/branches/alpha/badge)](https://appcenter.ms)
+[![Build status](https://build.appcenter.ms/v0.1/apps/1e1a1b27-79f7-4a73-bc71-4fb8788f314e/branches/beta/badge)](https://appcenter.ms)
 
 # TV System Debugging Tool
 
