@@ -8,6 +8,7 @@ import android.content.IntentFilter
 import android.hardware.usb.UsbDeviceConnection
 import com.hoho.android.usbserial.driver.UsbSerialPort
 import com.hoho.android.usbserial.util.SerialInputOutputManager
+import com.microsoft.appcenter.crashes.Crashes
 import java.io.IOException
 import java.security.InvalidParameterException
 import java.util.concurrent.Executors
@@ -44,10 +45,12 @@ class SerialSocket internal constructor(context: Context, connection: UsbDeviceC
                 serialPort!!.dtr = false
                 serialPort!!.rts = false
             } catch (ignored: Exception) {
+                Crashes.trackError(ignored)
             }
             try {
                 serialPort!!.close()
             } catch (ignored: Exception) {
+                Crashes.trackError(ignored)
             }
             serialPort = null
         }
@@ -58,6 +61,7 @@ class SerialSocket internal constructor(context: Context, connection: UsbDeviceC
         try {
             context.unregisterReceiver(disconnectBroadcastReceiver)
         } catch (ignored: Exception) {
+            Crashes.trackError(ignored)
         }
     }
 
@@ -73,6 +77,7 @@ class SerialSocket internal constructor(context: Context, connection: UsbDeviceC
 
     override fun onRunError(e: Exception) {
         if (listener != null) listener!!.onSerialIoError(e)
+        Crashes.trackError(e)
     }
 
     companion object {

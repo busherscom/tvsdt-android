@@ -23,6 +23,8 @@ import com.bushers.tvsdt.CustomProber.customProber
 import com.bushers.tvsdt.SerialService.SerialBinder
 import com.hoho.android.usbserial.driver.UsbSerialPort
 import com.hoho.android.usbserial.driver.UsbSerialProber
+import com.microsoft.appcenter.analytics.Analytics
+import com.microsoft.appcenter.crashes.Crashes
 import java.io.IOException
 import java.util.*
 import kotlin.concurrent.timerTask
@@ -64,7 +66,12 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
 
     override fun onStart() {
         super.onStart()
-        if (service != null) service!!.attach(this) else activity!!.startService(Intent(activity, SerialService::class.java)) // prevents service destroy on unbind from recreated activity caused by orientation change
+        if (service != null) service!!.attach(this) else activity!!.startService(
+            Intent(
+                activity,
+                SerialService::class.java
+            )
+        ) // prevents service destroy on unbind from recreated activity caused by orientation change
     }
 
     override fun onStop() {
@@ -74,20 +81,28 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
-        activity!!.bindService(Intent(activity, SerialService::class.java), this, Context.BIND_AUTO_CREATE)
+        activity!!.bindService(
+            Intent(activity, SerialService::class.java),
+            this,
+            Context.BIND_AUTO_CREATE
+        )
     }
 
     override fun onDetach() {
         try {
             activity!!.unbindService(this)
         } catch (ignored: Exception) {
+            Crashes.trackError(ignored)
         }
         super.onDetach()
     }
 
     override fun onResume() {
         super.onResume()
-        activity!!.registerReceiver(broadcastReceiver, IntentFilter(Constants.INTENT_ACTION_GRANT_USB))
+        activity!!.registerReceiver(
+            broadcastReceiver,
+            IntentFilter(Constants.INTENT_ACTION_GRANT_USB)
+        )
         if (initialStart && service != null) {
             initialStart = false
             activity!!.runOnUiThread { connect() }
@@ -117,15 +132,23 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
     /*
      * UI
      */
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
         val view = inflater.inflate(R.layout.fragment_terminal, container, false)
         val color = getString(java.lang.String.valueOf(R.color.colorReceiveText).toInt())
-        receiveText = view.findViewById(R.id.receive_text) // TextView performance decreases with number of spans
+        receiveText =
+            view.findViewById(R.id.receive_text) // TextView performance decreases with number of spans
         receiveText?.setTextColor(Color.parseColor(color)) // set as default color to reduce number of spans
         receiveText?.movementMethod = ScrollingMovementMethod.getInstance()
         val sendText = view.findViewById<TextView>(R.id.send_text)
         val sendBtn = view.findViewById<View>(R.id.send_btn)
-        sendBtn.setOnClickListener { send(sendText.text.toString()) }
+        sendBtn.setOnClickListener {
+            send(sendText.text.toString())
+            Analytics.trackEvent("send_text")
+        }
         controlLines = ControlLines(view)
         return view
     }
@@ -146,7 +169,10 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
                 val pos = listOf(*newlineValues).indexOf(newline)
                 val builder = AlertDialog.Builder(activity)
                 builder.setTitle("Newline")
-                builder.setSingleChoiceItems(newlineNames, pos) { dialog: DialogInterface, item1: Int ->
+                builder.setSingleChoiceItems(
+                    newlineNames,
+                    pos
+                ) { dialog: DialogInterface, item1: Int ->
                     newline = newlineValues[item1]
                     dialog.dismiss()
                 }
@@ -185,18 +211,30 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
         usbSerialPort = driver.ports[portNum]
         val usbConnection = usbManager.openDevice(driver.device)
         if (usbConnection == null && permissionGranted == null && !usbManager.hasPermission(driver.device)) {
-            val usbPermissionIntent = PendingIntent.getBroadcast(activity, 0, Intent(Constants.INTENT_ACTION_GRANT_USB), 0)
+            val usbPermissionIntent = PendingIntent.getBroadcast(
+                activity,
+                0,
+                Intent(Constants.INTENT_ACTION_GRANT_USB),
+                0
+            )
             usbManager.requestPermission(driver.device, usbPermissionIntent)
             return
         }
         if (usbConnection == null) {
-            if (!usbManager.hasPermission(driver.device)) status("connection failed: permission denied") else status("connection failed: open failed")
+            if (!usbManager.hasPermission(driver.device)) status("connection failed: permission denied") else status(
+                "connection failed: open failed"
+            )
             return
         }
         connected = Connected.Pending
         try {
             usbSerialPort?.open(usbConnection)
-            usbSerialPort?.setParameters(baudRate, UsbSerialPort.DATABITS_8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE)
+            usbSerialPort?.setParameters(
+                baudRate,
+                UsbSerialPort.DATABITS_8,
+                UsbSerialPort.STOPBITS_1,
+                UsbSerialPort.PARITY_NONE
+            )
             val socket = SerialSocket(activity!!.applicationContext, usbConnection, usbSerialPort)
             service!!.connect(socket)
             // usb connect is not asynchronous. connect-success and connect-error are returned immediately from socket.connect
@@ -204,6 +242,7 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
             onSerialConnect()
         } catch (e: Exception) {
             onSerialConnectError(e)
+            Crashes.trackError(e)
         }
     }
 
@@ -221,16 +260,24 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
         }
         try {
             val color = getString(java.lang.String.valueOf(R.color.colorSendText).toInt())
-            val spn = SpannableStringBuilder("""
+            val spn = SpannableStringBuilder(
+                """
     $str
     
-    """.trimIndent())
-            spn.setSpan(ForegroundColorSpan(Color.parseColor(color)), 0, spn.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+    """.trimIndent()
+            )
+            spn.setSpan(
+                ForegroundColorSpan(Color.parseColor(color)),
+                0,
+                spn.length,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
             receiveText!!.append(spn)
             val data = (str + newline).toByteArray()
             service!!.write(data)
         } catch (e: Exception) {
             onSerialIoError(e)
+            Crashes.trackError(e)
         }
     }
 
@@ -240,11 +287,18 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
 
     fun status(str: String) {
         val color = getString(java.lang.String.valueOf(R.color.colorStatusText).toInt())
-        val spn = SpannableStringBuilder("""
+        val spn = SpannableStringBuilder(
+            """
     $str
     
-    """.trimIndent())
-        spn.setSpan(ForegroundColorSpan(Color.parseColor(color)), 0, spn.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+    """.trimIndent()
+        )
+        spn.setSpan(
+            ForegroundColorSpan(Color.parseColor(color)),
+            0,
+            spn.length,
+            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
         receiveText!!.append(spn)
     }
 
@@ -259,6 +313,7 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
 
     override fun onSerialConnectError(e: Exception?) {
         status("connection failed: " + e!!.message)
+        Crashes.trackError(e)
         disconnect()
     }
 
@@ -268,6 +323,7 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
 
     override fun onSerialIoError(e: Exception?) {
         status("connection lost: " + e!!.message)
+        Crashes.trackError(e)
         disconnect()
     }
 
@@ -289,6 +345,7 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
                 mainLooper.postDelayed(runnable, refreshInterval.toLong())
             } catch (e: IOException) {
                 status("getControlLines() failed: " + e.message + " -> stopped control line refresh")
+                Crashes.trackError(e)
             }
         }
 
@@ -297,7 +354,12 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
             try {
                 run()
             } catch (e: IOException) {
-                Toast.makeText(activity, "getSupportedControlLines() failed: " + e.message, Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    activity,
+                    "getSupportedControlLines() failed: " + e.message,
+                    Toast.LENGTH_SHORT
+                ).show()
+                Crashes.trackError(e)
             }
         }
 
@@ -310,7 +372,8 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
 
 
         init {
-            runnable = Runnable { this.run() } // w/o explicit Runnable, a new lambda would be created on each postDelayed, which would not be found again by removeCallbacks
+            runnable =
+                Runnable { this.run() } // w/o explicit Runnable, a new lambda would be created on each postDelayed, which would not be found again by removeCallbacks
 
             val keyAccessEnter = view.findViewById<View>(R.id.key_access_1)
             val keyAccessEsc = view.findViewById<View>(R.id.key_access_2)
@@ -322,21 +385,48 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
             val custar = view.findViewById<View>(R.id.custar)
             val mmcinfo = view.findViewById<View>(R.id.mmcinfo)
             val reset = view.findViewById<View>(R.id.reset)
-            bootLogo.setOnClickListener { send("bootlogo") }
-            panelInit.setOnClickListener { send("panel_init") }
-            usbstart.setOnClickListener { send("usbstart") }
-            restoreBackup.setOnClickListener { send("restore_backup") }
-            audioPreinit.setOnClickListener { send("audio_preinit") }
-            custar.setOnClickListener { send("custar") }
-            mmcinfo.setOnClickListener { send("mmcinfo") }
-            reset.setOnClickListener { send("reset") }
+            bootLogo.setOnClickListener {
+                send("bootlogo")
+                Analytics.trackEvent("bootlogo")
+            }
+            panelInit.setOnClickListener {
+                send("panel_init")
+                Analytics.trackEvent("panel_init")
+            }
+            usbstart.setOnClickListener {
+                send("usbstart")
+                Analytics.trackEvent("usbstart")
+            }
+            restoreBackup.setOnClickListener {
+                send("restore_backup")
+                Analytics.trackEvent("restore_backup")
+            }
+            audioPreinit.setOnClickListener {
+                send("audio_preinit")
+                Analytics.trackEvent("audio_preinit")
+            }
+            custar.setOnClickListener {
+                send("custar")
+                Analytics.trackEvent("custar")
+            }
+            mmcinfo.setOnClickListener {
+                send("mmcinfo")
+                Analytics.trackEvent("mmcinfo")
+            }
+            reset.setOnClickListener {
+                send("reset")
+                Analytics.trackEvent("reset")
+            }
             fun key() {
                 Timer().scheduleAtFixedRate(timerTask {
                     send("Enter")
+
                 }, 2000, 2)
+                Analytics.trackEvent("enter")
             }
             keyAccessEnter.setOnClickListener {
                 key()
+                Analytics.trackEvent("esc")
             }
             keyAccessEsc.setOnClickListener {
                 key()

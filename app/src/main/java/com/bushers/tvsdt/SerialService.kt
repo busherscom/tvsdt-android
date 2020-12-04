@@ -9,6 +9,7 @@ import android.graphics.Color
 import android.os.*
 import androidx.core.app.NotificationCompat
 import com.bushers.tvsdt.SerialService
+import com.microsoft.appcenter.crashes.Crashes
 import java.io.IOException
 import java.util.*
 
@@ -179,6 +180,7 @@ class SerialService : Service(), SerialListener {
                 }
             }
         }
+        Crashes.trackError(e)
     }
 
     override fun onSerialRead(data: ByteArray?) {
