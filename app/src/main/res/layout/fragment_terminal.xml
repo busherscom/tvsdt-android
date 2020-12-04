@@ -6,76 +6,97 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <LinearLayout
-        android:layout_width="wrap_content"
+    <HorizontalScrollView
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:layout_weight="0">
 
-        <ToggleButton
-            android:id="@+id/controlLineRts"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:minWidth="48sp"
-            android:textOff="@string/rts"
-            android:textOn="@string/rts" />
+            android:orientation="horizontal">
 
-        <ToggleButton
-            android:id="@+id/controlLineCts"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:minWidth="48sp"
-            android:clickable="false"
-            android:textColor="@android:color/secondary_text_dark"
-            android:textOff="@string/cts"
-            android:textOn="@string/cts" />
+            <Button
+                android:id="@+id/panel_init"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/panel_init" />
 
-        <View
-            android:layout_height="match_parent"
-            android:layout_width="6dp" />
+            <Button
+                android:id="@+id/bootlogo"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/bootlogo" />
 
-        <ToggleButton
-            android:id="@+id/controlLineDtr"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:minWidth="48sp"
-            android:textOff="@string/dtr"
-            android:textOn="@string/dtr" />
+            <Button
+                android:id="@+id/usbstart"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/usbstart" />
 
-        <ToggleButton
-            android:id="@+id/controlLineDsr"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:clickable="false"
-            android:minWidth="48sp"
-            android:textColor="@android:color/secondary_text_dark"
-            android:textOff="@string/dsr"
-            android:textOn="@string/dsr" />
+            <Button
+                android:id="@+id/restore_backup"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/restore_backup" />
 
-        <View
-            android:layout_height="match_parent"
-            android:layout_width="6dp" />
+            <Button
+                android:id="@+id/audio_preinit"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/audio_preinit" />
 
-        <ToggleButton
-            android:id="@+id/controlLineCd"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:clickable="false"
-            android:minWidth="48sp"
-            android:textColor="@android:color/secondary_text_dark"
-            android:textOff="@string/cd"
-            android:textOn="@string/cd" />
+            <Button
+                android:id="@+id/mmcinfo"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/mmcinfo" />
 
-        <ToggleButton
-            android:id="@+id/controlLineRi"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:minWidth="48sp"
-            android:clickable="false"
-            android:textColor="@android:color/secondary_text_dark"
-            android:textOff="@string/ri"
-            android:textOn="@string/ri" />
+            <Button
+                android:id="@+id/custar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/custar"
+                style="?android:attr/buttonBarButtonStyle" />
 
-    </LinearLayout>
+            <Button
+                android:id="@+id/reset"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/reset" />
+
+            <Button
+                android:id="@+id/key_access_1"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/key_access_1" />
+
+            <Button
+                android:id="@+id/key_access_2"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/key_access_2" />
+        </LinearLayout>
+    </HorizontalScrollView>
 
     <View
         android:layout_width="match_parent"
