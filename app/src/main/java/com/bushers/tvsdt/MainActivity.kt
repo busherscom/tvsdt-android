@@ -1,6 +1,7 @@
 package com.bushers.tvsdt
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
@@ -16,16 +17,21 @@ class MainActivity : AppCompatActivity(), FragmentManager.OnBackStackChangedList
         if (!AppCenter.isConfigured()) {
             if (BuildConfig.APPCENTER_APP_SECRET != "") {
                 // Use APPCENTER_APP_SECRET environment variable if it exists
-                AppCenter.start(application, BuildConfig.APPCENTER_APP_SECRET,
-                    Analytics::class.java, Crashes::class.java)
+                AppCenter.start(
+                    application, BuildConfig.APPCENTER_APP_SECRET,
+                    Analytics::class.java, Crashes::class.java
+                )
             } else {
                 // Otherwise use the hardcoded string value here
-                AppCenter.start(application, "<APP SECRET HERE>",
-                    Analytics::class.java, Crashes::class.java)
+                AppCenter.start(
+                    application, "<APP SECRET HERE>",
+                    Analytics::class.java, Crashes::class.java
+                )
             }
         }
         if (BuildConfig.DEBUG) {
             AppCenter.setLogLevel(Log.VERBOSE)
+            logDeviceInfo()
         }
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -55,4 +61,26 @@ class MainActivity : AppCompatActivity(), FragmentManager.OnBackStackChangedList
         }
         super.onNewIntent(intent)
     }
+    private val tag = "MainActivity"
+    private fun logDeviceInfo() {
+        val properties: MutableMap<String, String> = HashMap()
+        properties["BRAND"] = Build.BRAND
+        properties["DEVICE"] = Build.DEVICE
+        properties["MANUFACTURER"] = Build.MANUFACTURER
+        properties["MODEL"] = Build.MODEL
+        properties["PRODUCT"] = Build.PRODUCT
+        properties["CODENAME"] = Build.VERSION.CODENAME
+        properties["RELEASE"] = Build.VERSION.RELEASE
+        properties["SDK"] = Build.VERSION.SDK_INT.toString()
+        Analytics.trackEvent("Device Info", properties)
+        Log.i(tag,"BRAND: " + Build.BRAND)
+        Log.i(tag,"DEVICE: " + Build.DEVICE)
+        Log.i(tag,"MANUFACTURER: " + Build.MANUFACTURER)
+        Log.i(tag,"MODEL: " + Build.MODEL)
+        Log.i(tag,"PRODUCT: " + Build.PRODUCT)
+        Log.i(tag,"CODENAME: " + Build.VERSION.CODENAME)
+        Log.i(tag,"RELEASE: " + Build.VERSION.RELEASE)
+        Log.i(tag,"SDK_INT: " + Build.VERSION.SDK_INT)
+    }
+
 }

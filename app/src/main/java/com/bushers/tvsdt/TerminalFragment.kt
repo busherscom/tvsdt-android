@@ -147,7 +147,7 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
         val sendBtn = view.findViewById<View>(R.id.send_btn)
         sendBtn.setOnClickListener {
             send(sendText.text.toString())
-            Analytics.trackEvent("send_text")
+            Analytics.trackEvent("OnClick Send Text")
         }
         controlLines = ControlLines(view)
         return view
@@ -158,6 +158,7 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        Analytics.trackEvent("OnClick New Line")
         return when (item.itemId) {
             R.id.clear -> {
                 receiveText!!.text = ""
@@ -387,60 +388,57 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
             val reset = view.findViewById<View>(R.id.reset)
             bootLogo.setOnClickListener {
                 send("bootlogo")
-                Analytics.trackEvent("bootlogo")
+                Analytics.trackEvent("OnClick Boot Logo")
             }
             panelInit.setOnClickListener {
                 send("panel_init")
-                Analytics.trackEvent("panel_init")
+                Analytics.trackEvent("OnClick Panel Init")
             }
             usbstart.setOnClickListener {
-                send("usbstart")
-                Analytics.trackEvent("usbstart")
+                send("usbstart 0")
+                send("emmcbin 0")
+                Analytics.trackEvent("OnClick USB Start")
             }
             restoreBackup.setOnClickListener {
                 send("restore_backup")
-                Analytics.trackEvent("restore_backup")
+                Analytics.trackEvent("OnClick Restore Backup")
             }
             audioPreinit.setOnClickListener {
                 send("audio_preinit")
-                Analytics.trackEvent("audio_preinit")
+                send("bootmusic")
+                Analytics.trackEvent("OnClick Sound Tests")
             }
             custar.setOnClickListener {
                 send("custar")
-                Analytics.trackEvent("custar")
+                Analytics.trackEvent("OnClick custar")
             }
             mmcinfo.setOnClickListener {
                 send("mmcinfo")
-                Analytics.trackEvent("mmcinfo")
+                Analytics.trackEvent("OnClick MMC Info")
             }
             reset.setOnClickListener {
                 send("reset")
-                Analytics.trackEvent("reset")
+                Analytics.trackEvent("OnClick Reset")
             }
             fun key() {
-                Timer().scheduleAtFixedRate(timerTask {
-                    send("Enter")
+                try {
+                    Timer().scheduleAtFixedRate(timerTask {
+                        send("Enter")
 
-                }, 2000, 2)
-                Analytics.trackEvent("enter")
+                    }, 2000, 2)
+                } catch (e: Exception) {
+                    Crashes.trackError(e)
+                }
+
             }
             keyAccessEnter.setOnClickListener {
                 key()
-                Analytics.trackEvent("esc")
+                Analytics.trackEvent("OnClick Access Key")
             }
             keyAccessEsc.setOnClickListener {
                 key()
+                Analytics.trackEvent("OnClick Access Key")
             }
-            /**
-            rtsBtn = view.findViewById(R.id.controlLineRts)
-            ctsBtn = view.findViewById(R.id.controlLineCts)
-            dtrBtn = view.findViewById(R.id.controlLineDtr)
-            dsrBtn = view.findViewById(R.id.controlLineDsr)
-            cdBtn = view.findViewById(R.id.controlLineCd)
-            riBtn = view.findViewById(R.id.controlLineRi)
-            rtsBtn.setOnClickListener { v: View -> toggle(v) }
-            dtrBtn.setOnClickListener { v: View -> toggle(v) }
-             **/
         }
     }
 

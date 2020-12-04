@@ -1,5 +1,6 @@
 package com.bushers.tvsdt
 
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Context
 import android.hardware.usb.UsbDevice
@@ -15,10 +16,15 @@ import androidx.fragment.app.ListFragment
 import com.bushers.tvsdt.CustomProber.customProber
 import com.hoho.android.usbserial.driver.UsbSerialDriver
 import com.hoho.android.usbserial.driver.UsbSerialProber
+import com.microsoft.appcenter.analytics.Analytics
 import java.util.*
 
 class DevicesFragment : ListFragment() {
-    internal inner class ListItem(var device: UsbDevice, var port: Int, var driver: UsbSerialDriver?)
+    internal inner class ListItem(
+        var device: UsbDevice,
+        var port: Int,
+        var driver: UsbSerialDriver?
+    )
 
     private val listItems = ArrayList<ListItem>()
     private var listAdapter: ArrayAdapter<ListItem>? = null
@@ -27,20 +33,44 @@ class DevicesFragment : ListFragment() {
         super.onCreate(savedInstanceState)
         setHasOptionsMenu(true)
         listAdapter = object :
-                ArrayAdapter<DevicesFragment.ListItem>(activity!!, 0, listItems) {
+            ArrayAdapter<DevicesFragment.ListItem>(activity!!, 0, listItems) {
             override fun getView(position: Int, view: View?, parent: ViewGroup): View {
                 var vw = view
                 val item = listItems[position]
-                if (vw == null) vw = activity!!.layoutInflater.inflate(R.layout.device_list_item, parent, false)
+                if (vw == null) vw =
+                    activity!!.layoutInflater.inflate(R.layout.device_list_item, parent, false)
                 val text1 = vw!!.findViewById<TextView>(R.id.text1)
                 val text2 = vw.findViewById<TextView>(R.id.text2)
-                if (item.driver == null) text1.text = "<no driver>" else if (item.driver!!.ports.size == 1) text1.text = item.driver!!.javaClass.simpleName.replace("SerialDriver", "") else text1.text = item.driver!!.javaClass.simpleName.replace("SerialDriver", "") + ", Port " + item.port
-                text2.text = String.format(Locale.US, "Vendor %04X, Product %04X", item.device.vendorId, item.device.productId)
+                val driverText = when {
+                    item.driver == null -> "<no driver>"
+                    item.driver!!.ports.size == 1 ->
+                            item.driver!!.javaClass.simpleName.replace("SerialDriver", "")
+                    else ->
+                        item.driver!!.javaClass.simpleName.replace(
+                            "SerialDriver",
+                            ""
+                        ) + ", Port " + item.port
+                    }
+
+                val vendorText = String.format(
+                    Locale.US,
+                    "Vendor %04X, Product %04X",
+                    item.device.vendorId,
+                    item.device.productId
+                )
+
+                text1.text = driverText
+                text2.text = vendorText
+                val properties: MutableMap<String, String> = HashMap()
+                properties["Serial Driver"] = driverText
+                properties["Vendor ID & Product ID"] = vendorText
+                Analytics.trackEvent("Serial Device", properties)
                 return vw
             }
         }
     }
 
+    @SuppressLint("InflateParams")
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
         setListAdapter(null)
@@ -81,7 +111,7 @@ class DevicesFragment : ListFragment() {
         }
     }
 
-    fun refresh() {
+    private fun refresh() {
         val usbManager = activity!!.getSystemService(Context.USB_SERVICE) as UsbManager
         val usbDefaultProber = UsbSerialProber.getDefaultProber()
         val usbCustomProber = customProber
@@ -111,7 +141,8 @@ class DevicesFragment : ListFragment() {
             args.putInt("baud", baudRate)
             val fragment: Fragment = TerminalFragment()
             fragment.arguments = args
-            fragmentManager!!.beginTransaction().replace(R.id.fragment, fragment, "terminal").addToBackStack(null).commit()
+            fragmentManager!!.beginTransaction().replace(R.id.fragment, fragment, "terminal")
+                .addToBackStack(null).commit()
         }
     }
 }
