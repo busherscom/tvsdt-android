@@ -25,6 +25,6 @@
     <string name="audio_preinit">DIAGNOSE SOUND</string>
     <string name="custar">FIRMWARE UPGRADE</string>
     <string name="mmcinfo">MEMORY INFORMATION</string>
-    <string name="reset">REST</string>
+    <string name="reset">RESET</string>
 
 </resources>
