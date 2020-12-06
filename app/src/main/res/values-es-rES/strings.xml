@@ -11,14 +11,16 @@
     <string name="app_description">Herramienta de Depuración de Estación de TV</string>
     <string name="send_text">Escribir Texto a Envíar</string>
     <string name="no_driver">sin driver</string>
-    <string name="key_access_1">Key Access 1</string>
-    <string name="key_access_2">Key Access 2</string>
-    <string name="bootlogo">Logo</string>
-    <string name="restore_backup">Restaurar</string>
-    <string name="audio_preinit">Sonido</string>
-    <string name="usbstart">Copia BOOT 1_2</string>
-    <string name="panel_init">Ledbar</string>
-    <string name="custar">Actualización</string>
-    <string name="reset">Reset</string>
-    <string name="mmcinfo">Memoria</string>
+    <string name="key_access_1">LLAVE DE ACCESO 1</string>
+    <string name="key_access_2">LLAVE DE ACCESO 1</string>
+    <string name="bootlogo">LOGO ENCENDIDO</string>
+    <string name="restore_backup">RESTAURAR</string>
+    <string name="audio_preinit">SONIDO</string>
+    <string name="usbstart">COPIA BOOT 1_2</string>
+    <string name="panel_init">LEDBAR</string>
+    <string name="custar">ACTUALIZACIÓN</string>
+    <string name="reset">RESET</string>
+    <string name="mmcinfo">MEMORÍA</string>
+    <string name="destroy_logo">LOGO APAGADO</string>
+    <string name="todo">Por Hacer</string>
 </resources>
