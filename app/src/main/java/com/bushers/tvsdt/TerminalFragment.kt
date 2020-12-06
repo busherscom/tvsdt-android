@@ -17,7 +17,6 @@ import android.text.style.ForegroundColorSpan
 import android.view.*
 import android.widget.TextView
 import android.widget.Toast
-import android.widget.ToggleButton
 import androidx.fragment.app.Fragment
 import com.bushers.tvsdt.CustomProber.customProber
 import com.bushers.tvsdt.SerialService.SerialBinder
@@ -26,7 +25,7 @@ import com.hoho.android.usbserial.driver.UsbSerialProber
 import com.microsoft.appcenter.analytics.Analytics
 import com.microsoft.appcenter.crashes.Crashes
 import java.io.IOException
-import java.util.*
+
 
 class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
     private enum class Connected {
@@ -252,7 +251,21 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
         service!!.disconnect()
         usbSerialPort = null
     }
-
+/*
+    private fun openWhatsApp() {
+        val smsNumber = "7****" // E164 format without '+' sign
+        val sendIntent = Intent(Intent.ACTION_SEND)
+        sendIntent.type = "text/plain"
+        sendIntent.putExtra(Intent.EXTRA_TEXT, "This is my text to send.")
+        sendIntent.putExtra("jid", "$smsNumber@s.whatsapp.net") //phone number without "+" prefix
+        sendIntent.setPackage("com.whatsapp")
+        if (sendIntent.resolveActivity(activity!!.packageManager) == null) {
+            Toast.makeText(this, "Error/n" + e.toString(), Toast.LENGTH_SHORT).show()
+            return
+        }
+        startActivity(sendIntent)
+    }
+*/
     private fun send(str: String) {
         if (connected != Connected.True) {
             Toast.makeText(activity, "not connected", Toast.LENGTH_SHORT).show()
@@ -273,6 +286,20 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
                 Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
             )
             receiveText!!.append(spn)
+            val data = (str + newline).toByteArray()
+            service!!.write(data)
+        } catch (e: Exception) {
+            onSerialIoError(e)
+            Crashes.trackError(e)
+        }
+    }
+
+    private fun sendCommand(str: String) {
+        if (connected != Connected.True) {
+            Toast.makeText(activity, "not connected", Toast.LENGTH_SHORT).show()
+            return
+        }
+        try {
             val data = (str + newline).toByteArray()
             service!!.write(data)
         } catch (e: Exception) {
@@ -330,14 +357,6 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
     internal inner class ControlLines(view: View) {
         private val mainLooper: Handler = Handler(Looper.getMainLooper())
         private val runnable: Runnable
-        private fun toggle(v: View) {
-            val btn = v as ToggleButton
-            if (connected != Connected.True) {
-                btn.isChecked = !btn.isChecked
-                Toast.makeText(activity, "not connected", Toast.LENGTH_SHORT).show()
-                return
-            }
-        }
 
         private fun run() {
             if (connected != Connected.True) return
@@ -368,15 +387,15 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
         }
 
 
-        private val refreshInterval = 200 // msec
+        private val refreshInterval = 200
 
 
         init {
             runnable =
                 Runnable { this.run() } // w/o explicit Runnable, a new lambda would be created on each postDelayed, which would not be found again by removeCallbacks
 
-            val keyAccessEnter = view.findViewById<View>(R.id.key_access_1)
-            val keyAccessEsc = view.findViewById<View>(R.id.key_access_2)
+            // val keyAccessEnter = view.findViewById<View>(R.id.key_access_1)
+            // val keyAccessEsc = view.findViewById<View>(R.id.key_access_2)
             val bootLogo = view.findViewById<View>(R.id.bootlogo)
             val panelInit = view.findViewById<View>(R.id.panel_init)
             val usbstart = view.findViewById<View>(R.id.usbstart)
@@ -386,42 +405,42 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
             val mmcinfo = view.findViewById<View>(R.id.mmcinfo)
             val reset = view.findViewById<View>(R.id.reset)
             bootLogo.setOnClickListener {
-                send("bootlogo")
+                sendCommand("bootlogo")
                 Analytics.trackEvent("OnClick Boot Logo")
             }
             panelInit.setOnClickListener {
-                send("panel_init")
+                sendCommand("panel_init")
                 Analytics.trackEvent("OnClick Panel Init")
             }
             usbstart.setOnClickListener {
-                send("usbstart 0")
-                send("emmcbin 0")
+                sendCommand("usbstart 0")
+                sendCommand("emmcbin 0")
                 Analytics.trackEvent("OnClick USB Start")
             }
             restoreBackup.setOnClickListener {
-                send("restore_backup")
+                sendCommand("restore_backup")
                 Analytics.trackEvent("OnClick Restore Backup")
             }
             audioPreinit.setOnClickListener {
-                send("audio_preinit")
-                send("bootmusic")
+                sendCommand("audio_preinit")
+                sendCommand("bootmusic")
                 Analytics.trackEvent("OnClick Sound Tests")
             }
             custar.setOnClickListener {
-                send("custar")
+                sendCommand("custar")
                 Analytics.trackEvent("OnClick custar")
             }
             mmcinfo.setOnClickListener {
-                send("mmcinfo")
+                sendCommand("mmcinfo")
                 Analytics.trackEvent("OnClick MMC Info")
             }
             reset.setOnClickListener {
-                send("reset")
+                sendCommand("reset")
                 Analytics.trackEvent("OnClick Reset")
             }
 
 
-
+/*
             keyAccessEnter.setOnClickListener {
                 try {
                     Timer().scheduleAtFixedRate(object : TimerTask() {
@@ -460,6 +479,7 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
 
                 Analytics.trackEvent("OnClick Access Key")
             }
+            */
         }
     }
 
