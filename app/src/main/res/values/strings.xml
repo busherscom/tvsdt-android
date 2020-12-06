@@ -18,7 +18,8 @@
     <string name="no_driver">no driver</string>
     <string name="key_access_1">KEY ACCESS 1</string>
     <string name="key_access_2">KEY ACCESS 2</string>
-    <string name="bootlogo">BOOTLOGO</string>
+    <string name="bootlogo">LOGO ON</string>
+    <string name="destroy_logo">LOGO OFF</string>
     <string name="panel_init">FORCE BACKLIGHT</string>
     <string name="usbstart">BACKUP TO USB</string>
     <string name="restore_backup">RESTORE BACKUP</string>
@@ -26,5 +27,5 @@
     <string name="custar">FIRMWARE UPGRADE</string>
     <string name="mmcinfo">MEMORY INFORMATION</string>
     <string name="reset">RESET</string>
-
+    <string name="todo">TODO</string>
 </resources>
