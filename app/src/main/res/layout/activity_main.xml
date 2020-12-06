@@ -18,6 +18,12 @@
             android:background="?attr/colorPrimary"
             />
 
+        <ImageView
+            android:id="@+id/imageView"
+            android:layout_width="match_parent"
+            android:layout_height="70dp"
+            android:contentDescription="@string/todo"
+            app:srcCompat="@drawable/brand_banner" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <RelativeLayout
