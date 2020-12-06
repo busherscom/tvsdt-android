@@ -31,7 +31,8 @@
             android:layout_height="match_parent"
             android:gravity="center"
             android:padding="4dp"
-            android:text="@string/contact" />
+            android:text="@string/contact"
+            android:textColor="#095ABA" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <RelativeLayout
