@@ -80,21 +80,6 @@
                 android:layout_weight="1"
                 android:text="@string/reset" />
 
-            <Button
-                android:id="@+id/key_access_1"
-                style="?android:attr/buttonBarButtonStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/key_access_1" />
-
-            <Button
-                android:id="@+id/key_access_2"
-                style="?android:attr/buttonBarButtonStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/key_access_2" />
         </LinearLayout>
     </HorizontalScrollView>
 
