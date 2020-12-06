@@ -397,6 +397,7 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
             // val keyAccessEnter = view.findViewById<View>(R.id.key_access_1)
             // val keyAccessEsc = view.findViewById<View>(R.id.key_access_2)
             val bootLogo = view.findViewById<View>(R.id.bootlogo)
+            val destroyLogo = view.findViewById<View>(R.id.destroy_logo)
             val panelInit = view.findViewById<View>(R.id.panel_init)
             val usbstart = view.findViewById<View>(R.id.usbstart)
             val restoreBackup = view.findViewById<View>(R.id.restore_backup)
@@ -404,9 +405,14 @@ class TerminalFragment : Fragment(), ServiceConnection, SerialListener {
             val custar = view.findViewById<View>(R.id.custar)
             val mmcinfo = view.findViewById<View>(R.id.mmcinfo)
             val reset = view.findViewById<View>(R.id.reset)
+
+            destroyLogo.setOnClickListener {
+                sendCommand("destroy_logo")
+                Analytics.trackEvent("OnClick Logo Off")
+            }
             bootLogo.setOnClickListener {
                 sendCommand("bootlogo")
-                Analytics.trackEvent("OnClick Boot Logo")
+                Analytics.trackEvent("OnClick Logo On")
             }
             panelInit.setOnClickListener {
                 sendCommand("panel_init")
